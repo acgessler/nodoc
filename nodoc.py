@@ -1,4 +1,5 @@
-
+from nodoc import *
+from nodoc.processors import JavaProcessor
 
 def main(config):
 
@@ -34,68 +35,14 @@ def main(config):
 		return (unix_abs_path(match.group(1)), match.group(2))
 
 
-	rex = {
-		'java-class-head': r"""\/\*\*(.*?)\*\/\s*
-			(public|private|protected|)\s?
-			(abstract|final)?\s+
-			(class|interface)\s+
-			(\w+?)\s"""
-	}
-
-
-	for k in list(rex.keys()):
-		rex[k] = re.compile(rex[k], re.DOTALL | re.VERBOSE)
-
-
-	docset = {}
-	classnames = set()
-
-	def add_to_docset(fullpath):
-		print('Processing ' + fullpath)
-		with open(fullpath, 'rt') as inp:
-			buffer = inp.read()
-			matched = re.findall(rex['java-class-head'], buffer)
-
-			for m in matched:
-				classnames.add(m[-1])
-			docset[fullpath] = matched
-
-	def generate_doc():
-		for fullpath, matched in docset.items():
-			for match in matched:
-				block, access_spec, abstract_final_spec, class_interface_spec, class_name = match
-				if len(block) == 0:
-					continue
-
-				lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
-				lines = [line[1:] if line[0] == '*' else line for line in lines]
-				block = '\n'.join(lines)
-
-				block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
-				block = re.sub(r'\b(' + '|'.join(classnames)+r')\b',r'__\1__', block)
-
-				import markdown
-				block = markdown.markdown( 
-r"""<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} </font> {class_name}
----------------
-
-{block}
-
-""".format(**locals()))
-
-				# github css for testing
-				css = r'<link href="https://gist.github.com/andyferra/2554919/raw/2e66cabdafe1c9a7f354aa2ebf5bc38265e638e5/github.css" rel="stylesheet"></link>'
-
-				with open(os.path.join(output_folder,class_name + ".html"), 'wt') as outp:
-					outp.write(css + block)
-
-
 	# create output folder
 	output_folder = 'output'
 	try:
 		os.mkdir(output_folder)
 	except:
 		pass
+
+	processor = JavaProcessor()
 
 	# process configuration file
 	with open(config, 'rt') as inp:
@@ -109,8 +56,6 @@ r"""<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} 
 		candidates = defaultdict(lambda: []) 
 		for (prefix, suffix) in patterns:
 			candidates[prefix].append(regexify(prefix + '/' + suffix))
-
-		print(candidates)
 		
 		# recursively walk files, and match them against the input set
 		for prefix, matchers in candidates.items():
@@ -123,8 +68,8 @@ r"""<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} 
 						if match is None:
 							continue
 
-						add_to_docset(fullpath)
-	generate_doc()
+						processor .add_to_docset(fullpath)
+	processor.generate_doc(output_folder)
 
 
 
