@@ -19,15 +19,17 @@ def main(config):
 			.replace(r'\*', path_character_set + r'+?') 
 		
 		pattern = '^' + pattern + '$'
+		print pattern
 		return re.compile(pattern)
 
 	def unix_abs_path(path):
 		return os.path.abspath(path).replace('\\','/')
 
-	def split_path_prefix(path, prefix_matcher = re.compile(r'^((?:{0}+[\\/])*)({0}*?[*?]?.*)$'\
+	def split_path_prefix(path, prefix_matcher = re.compile(r'^((?:\w+\:[\\/])?(?:{0}+[\\/])*)({0}*?[*?]?.*)$'\
 		.format(path_character_set))):
 
 		match = re.match(prefix_matcher, path)
+		print(match.groups())
 		assert len(match.groups()) == 2
 		return (unix_abs_path(match.group(1)), match.group(2))
 
@@ -107,12 +109,15 @@ r"""<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} 
 		candidates = defaultdict(lambda: []) 
 		for (prefix, suffix) in patterns:
 			candidates[prefix].append(regexify(prefix + '/' + suffix))
+
+		print(candidates)
 		
 		# recursively walk files, and match them against the input set
 		for prefix, matchers in candidates.items():
 			for (dirpath, dirnames, filenames) in os.walk(prefix):
 				for filename in filenames:
 					fullpath = unix_abs_path( os.path.join(dirpath, filename) )
+
 					for matcher in matchers:
 						match = matcher.match(fullpath)
 						if match is None:
