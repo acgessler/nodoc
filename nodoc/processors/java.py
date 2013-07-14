@@ -13,7 +13,8 @@ rex = {
 		(public|private|protected|)\s+	# java access specifier
 		(abstract|final|)\s+			# java abstract and final (which are mutually exclusive)
 		(class|interface)\s+			# class or interface specifier
-		(\w+?)\s"""						# name of class or interface
+		(\w+?)\s						# name of class or interface
+	"""
 
 	# matches a javadoc comment on top of a method, along with the method declaration
 	, 'java-method-head' : r""" 
@@ -22,13 +23,28 @@ rex = {
 		\*\/\s*		# end of multiline comment
 
 		(public|private|protected|)\s+	# java access specifier
-		(abstract|final|)\s+			# java abstract and final (which are mutually exclusive)
-		(.*?)\s+						# return type, cannot be tackled with a regex
-		(\w+?)\s+						# name of the function
-		\(\s+ 							# opening parameter block parentheses
+		((?:(?:abstract|final|synchronized|static)\s+)*)			# java modifiers
+		(\S*?)\s+						# return type, cannot be tackled with a regex
+		(\w+?)\s*						# name of the function
+		\(\s* 							# opening parameter block parentheses
 			(.*?)						# list of parameters, cannot be tackled with a regex
-		\s+\)							# closing parameter block parentheses
+		 \s*\)							# closing parameter block parentheses
 	"""
+}
+
+markdown_templates = {
+	'java-class' :
+r"""##<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} </font> {class_name} 
+
+{block}
+"""
+
+	, 'java-method': 
+r"""###<font size="-1"> {access_spec} {extra_spec} {return_type} </font> {name}({params})
+
+{comment}
+"""
+
 }
 
 
@@ -45,15 +61,16 @@ class JavaMethod:
 
 	@staticmethod
 	def parse_parameters(unparsed_parameter_block):
-		return []
+		return ['(todo)']
 
 
 class JavaClass:
-	def __init__(self):
+	def __init__(self, unparsed_block):
 		self.methods = {}
 
 	def add_method(self, method):
-		self.methods[method]
+		assert isinstance(method, JavaMethod)
+		self.methods[method] = method
 
 
 class JavaProcessor(Processor):
@@ -62,19 +79,55 @@ class JavaProcessor(Processor):
 		Processor.__init__(self)
 
 
+	@staticmethod
+	def extract_braced_section(buffer, start_cursor = 0):
+		"""
+		Extract next {} block from a text `buffer`, starting at `start_cursor`.
+		The method properly handles nested curly braces.
+
+		Returns (range_begin, range_end] that delimits the text contents in
+		between the curly braces. Returns a `None` if there are no further
+		braced blocks, or if an error occurs.
+		"""
+
+		# avoid copying the text buffer as it might be quite large
+		nested = 0
+		match_begin = -1
+
+		cursor = start_cursor
+		while cursor < len(buffer):
+			if buffer[cursor] == '{':
+				nested += 1
+				if nested == 1:
+					match_begin = cursor
+
+			elif buffer[cursor] == '}':
+				nested -= 1
+				if nested == 0:
+					return (match_begin+1, cursor)
+
+			cursor += 1
+		return None
+
+
+
+
 	def add_to_docset(self, fullpath):
 		print('Processing ' + fullpath)
 		with open(fullpath, 'rt') as inp:
 			buffer = inp.read()
 
-			matches = []
+			entries = []
 			for match in re.finditer(rex['java-class-head'], buffer):
+				end_head = match.end()
+
+				class_body_range = JavaProcessor.extract_braced_section(buffer, end_head)
+
 				groups = match.groups()
 				self.symbols.add(groups[-1])
-				matches.append(match)
+				entries.append( (buffer, class_body_range, match) )
 			
-			self.docset[fullpath] = matches
-
+			self.docset[fullpath] = entries
 
 	def generate_doc(self, output_folder):
 		import os
@@ -84,34 +137,49 @@ class JavaProcessor(Processor):
 				self.write_class_doc(match, output_folder)
 
 
-	def write_class_doc(self, match, output_folder):
-		block, access_spec, abstract_final_spec, class_interface_spec, class_name = match.groups()
-		if len(block) == 0:
-			return
 
+	# Internal
+
+
+	def javadoc_block_to_markdown(self, block):
 		lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
 		lines = [line[1:] if line[0] == '*' else line for line in lines]
 		block = '\n'.join(lines)
 
 		block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
-		block = re.sub(r'\b(' + '|'.join(self.symbols)+r')\b',r'__\1__', block)
+		block = re.sub(r'\b(' + '|'.join(self.symbols)+r')\b',r'[\1](www.example.com)', block)
+		block = re.sub(r'\{\s*@code\s+(.*?)\s*\}',r'<tt>\1</tt>', block) # todo: regex cannot handle this
+		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1', block) 
+		return block
+
+
+	def write_class_doc(self, entry, output_folder):
+		buffer, class_body_range, match = entry
+
+		block, access_spec, abstract_final_spec, class_interface_spec, class_name = match.groups()
+		if len(block) == 0:
+			return
+
+		block = self.javadoc_block_to_markdown(block)
 
 		import markdown
-		block = markdown.markdown( 
-r"""<font size="-1"> {access_spec} {abstract_final_spec} {class_interface_spec} </font> {class_name} 
----------------
+		block = markdown.markdown(markdown_templates['java-class'].format(**locals()))
 
-{block}
-""".format(**locals()))
+		methods = ""
+		if not class_body_range is None:
+			subset = buffer[class_body_range[0]:class_body_range[1]] # todo: get rid of copy
+			for match in re.finditer(rex['java-method-head'], subset):
+				comment, access_spec, extra_spec, return_type, name, params = match.groups()
+				comment = self.javadoc_block_to_markdown(comment)
 
-		matched = re.findall(rex['java-method-head'], block)
-		for m in matched:
-			print m.groups()
+				methods = methods + markdown.markdown(markdown_templates['java-method'].format(**locals()))
 
 		# github css for testing
 		css = r'<link href="https://gist.github.com/andyferra/2554919/raw/2e66cabdafe1c9a7f354aa2ebf5bc38265e638e5/github.css" rel="stylesheet"></link>'
 
 		import os.path
 		with open(os.path.join(output_folder,class_name + ".html"), 'wt') as outp:
-			outp.write(css + block)
+			# testing layout
+			outp.write(css + '<div style="float: left; width: 45%;">' + block + '</div>' +
+				'<div style="float:right; width: 45%;">' +  methods + '</div>') 
 
