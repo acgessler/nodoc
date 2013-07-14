@@ -6,29 +6,46 @@ import re
 rex = {
 	# matches a javadoc comment on top of a class, along with the class declaration
 	'java-class-head': r"""
-		\/\*\*		# start of multiline comment
-		(.*?)		# actual comment
-		\*\/\s*		# end of multiline comment
+		# start of multiline comment
+		\/\*\*		
+		# actual comment
+		(.*?)		
+		# end of multiline comment
+		\*\/\s*		
 
-		(public|private|protected|)\s+	# java access specifier
-		(abstract|final|)\s+			# java abstract and final (which are mutually exclusive)
-		(class|interface)\s+			# class or interface specifier
-		(\w+?)\s						# name of class or interface
+		# java access specifier
+		(public|private|protected|)\s+	
+		# java abstract and final (which are mutually exclusive)
+		(abstract|final|)\s+			
+		# class or interface specifier
+		(class|interface)\s+			
+		# name of class or interface
+		(\w+?)\s						
 	"""
 
 	# matches a javadoc comment on top of a method, along with the method declaration
 	, 'java-method-head' : r""" 
-		\/\*\*		# start of multiline comment
-		(.*?)		# actual comment
-		\*\/\s*		# end of multiline comment
+		# start of multiline comment
+		\/\*\*		
+		# actual comment
+		(.*?)		
+		# end of multiline comment
+		\*\/\s*		
 
-		(public|private|protected|)\s+	# java access specifier
-		((?:(?:abstract|final|synchronized|static)\s+)*)			# java modifiers
-		(\S*?)\s+						# return type, cannot be tackled with a regex
-		(\w+?)\s*						# name of the function
-		\(\s* 							# opening parameter block parentheses
-			(.*?)						# list of parameters, cannot be tackled with a regex
-		 \s*\)							# closing parameter block parentheses
+		# java access specifier
+		(public|private|protected|)\s+	=
+		# java modifiers
+		((?:(?:abstract|final|synchronized|static)\s+)*)	
+		# return type, cannot be further tackled with a regex		
+		(\S*?)\s+						
+		# name of the function
+		(\w+?)\s*						
+		# opening parameter block parentheses
+		\(\s* 							
+		# list of parameters, cannot be tackled with a regex
+			(.*?)						
+		# closing parameter block parentheses
+		 \s*\)							
 	"""
 }
 
@@ -44,7 +61,6 @@ r"""###<font size="-1"> {access_spec} {extra_spec} {return_type} </font> {name}(
 
 {comment}
 """
-
 }
 
 
@@ -54,6 +70,9 @@ for k in list(rex.keys()):
 
 
 class JavaMethod:
+	"""
+	Temporary representation for a partially parsed Java method.
+	"""
 	def __init__(self, name, return_type, unparsed_parameter_block):
 		self.name = name
 		self.return_type = return_type.strip()
@@ -65,6 +84,9 @@ class JavaMethod:
 
 
 class JavaClass:
+	"""
+	Temporary representation for a partially parsed Java class.
+	"""
 	def __init__(self, unparsed_block):
 		self.methods = {}
 
@@ -74,6 +96,9 @@ class JavaClass:
 
 
 class JavaProcessor(Processor):
+	"""
+	Implements `Processor` for java/javadoc.
+	"""
 	
 	def __init__(self):
 		Processor.__init__(self)
@@ -110,9 +135,9 @@ class JavaProcessor(Processor):
 		return None
 
 
-
-
 	def add_to_docset(self, fullpath):
+		"""
+		"""
 		print('Processing ' + fullpath)
 		with open(fullpath, 'rt') as inp:
 			buffer = inp.read()
@@ -130,6 +155,8 @@ class JavaProcessor(Processor):
 			self.docset[fullpath] = entries
 
 	def generate_doc(self, output_folder):
+		"""
+		"""
 		import os
 
 		for fullpath, matched in self.docset.items():
@@ -142,6 +169,9 @@ class JavaProcessor(Processor):
 
 
 	def javadoc_block_to_markdown(self, block):
+		"""
+		Given a javadoc annotated text block, substitute appropriate HTML/Markdown
+		"""
 		lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
 		lines = [line[1:] if line[0] == '*' else line for line in lines]
 		block = '\n'.join(lines)
@@ -149,11 +179,15 @@ class JavaProcessor(Processor):
 		block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
 		block = re.sub(r'\b(' + '|'.join(self.symbols)+r')\b',r'[\1](www.example.com)', block)
 		block = re.sub(r'\{\s*@code\s+(.*?)\s*\}',r'<tt>\1</tt>', block) # todo: regex cannot handle this
-		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1', block) 
+		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1</tt>', block) 
 		return block
 
 
 	def write_class_doc(self, entry, output_folder):
+		"""
+		Given a class `entry` from the documentation set, write documentation to
+		a file named <classname>.html in `output_folder`
+		"""
 		buffer, class_body_range, match = entry
 
 		block, access_spec, abstract_final_spec, class_interface_spec, class_name = match.groups()
@@ -172,7 +206,9 @@ class JavaProcessor(Processor):
 				comment, access_spec, extra_spec, return_type, name, params = match.groups()
 				comment = self.javadoc_block_to_markdown(comment)
 
-				methods = methods + markdown.markdown(markdown_templates['java-method'].format(**locals()))
+				methods = methods + markdown.markdown(
+					markdown_templates['java-method'].format(**locals())
+				)
 
 		# github css for testing
 		css = r'<link href="https://gist.github.com/andyferra/2554919/raw/2e66cabdafe1c9a7f354aa2ebf5bc38265e638e5/github.css" rel="stylesheet"></link>'
