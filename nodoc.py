@@ -68,7 +68,7 @@ def main(config):
 						if match is None:
 							continue
 
-						processor .add_to_docset(fullpath)
+						processor.add_to_docset(fullpath)
 	processor.generate_doc(output_folder)
 
 
