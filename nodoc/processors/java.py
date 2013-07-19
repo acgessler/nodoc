@@ -14,9 +14,9 @@ rex = {
 		\*\/\s*		
 
 		# java access specifier
-		(public|private|protected|)\s+	
+		(public\s+|private\s+|protected\s+|)
 		# java abstract and final (which are mutually exclusive)
-		(abstract|final|)\s+			
+		(abstract\s+|final\s+|)		
 		# class or interface specifier
 		(class|interface)\s+			
 		# name of class or interface
@@ -33,9 +33,9 @@ rex = {
 		\*\/\s*		
 
 		# java access specifier
-		(public|private|protected|)\s+	=
+		(public|private|protected|)\s*	
 		# java modifiers
-		((?:(?:abstract|final|synchronized|static)\s+)*)	
+		((?:(?:abstract|final|synchronized|static|native)\s+)*)	
 		# return type, cannot be further tackled with a regex		
 		(\S*?)\s+						
 		# name of the function
@@ -143,16 +143,26 @@ class JavaProcessor(Processor):
 			buffer = inp.read()
 
 			entries = []
-			for match in re.finditer(rex['java-class-head'], buffer):
-				end_head = match.end()
-
-				class_body_range = JavaProcessor.extract_braced_section(buffer, end_head)
-
-				groups = match.groups()
-				self.symbols.add(groups[-1])
-				entries.append( (buffer, class_body_range, match) )
-			
+			self.find_classes(buffer, entries)
 			self.docset[fullpath] = entries
+
+
+	def find_classes(self, buffer, entries):
+		for match in re.finditer(rex['java-class-head'], buffer):
+			end_head = match.end()
+
+			class_body_range = JavaProcessor.extract_braced_section(buffer, end_head)
+			if class_body_range is None:
+				continue
+
+			# find inner classes
+			self.find_classes(buffer[class_body_range[0]:class_body_range[1]], entries)
+
+			groups = match.groups()
+			self.symbols.add(groups[-1])
+			entries.append( (buffer, class_body_range, match) )
+			
+			
 
 	def generate_doc(self, output_folder):
 		"""
@@ -177,9 +187,24 @@ class JavaProcessor(Processor):
 		block = '\n'.join(lines)
 
 		block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
-		block = re.sub(r'\b(' + '|'.join(self.symbols)+r')\b',r'[\1](www.example.com)', block)
+		block = re.sub(r'\b(' + '|'.join(self.symbols)+r')\b',r'<tt>[\1](www.example.com)</tt>', block)
 		block = re.sub(r'\{\s*@code\s+(.*?)\s*\}',r'<tt>\1</tt>', block) # todo: regex cannot handle this
 		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1</tt>', block) 
+
+		
+		block = re.sub(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',
+			r'<br><b><font color="green">\1</font> &diams; </b> \2', block,
+			0, re.DOTALL)
+
+		block = re.sub(r'@(?:throws?|exception)(.*?)(?=@|\n\s*\n|$)',
+			r'<br><font color="darkred"> &dagger; </font> \1', block,
+			0, re.DOTALL)
+
+		block = re.sub(r'@return(.*?)(?=@|\n\s*\n|$)',
+			r'<br><b>&crarr;</b> \1', block,
+			0, re.DOTALL)
+
+		block = re.sub(r'@note(.*?)',r'<br> __Note__: \1', block)
 		return block
 
 
@@ -207,11 +232,11 @@ class JavaProcessor(Processor):
 				comment = self.javadoc_block_to_markdown(comment)
 
 				methods = methods + markdown.markdown(
-					markdown_templates['java-method'].format(**locals())
-				)
+					markdown_templates['java-method'].format(**locals()) 
+				) + '<hr size="4" align="left" color="#3B5996">'
 
 		# github css for testing
-		css = r'<link href="https://gist.github.com/andyferra/2554919/raw/2e66cabdafe1c9a7f354aa2ebf5bc38265e638e5/github.css" rel="stylesheet"></link>'
+		css = r'<link href="../temp_githubstyle.css" rel="stylesheet"></link>'
 
 		import os.path
 		with open(os.path.join(output_folder,class_name + ".html"), 'wt') as outp:
