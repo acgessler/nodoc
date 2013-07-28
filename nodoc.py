@@ -5,6 +5,7 @@ def main(config):
 
 	import re
 	import os.path 
+	import shutil
 
 	# set of valid characters in file names
 	path_character_set = r'[a-zA-Z0-9_\-;,.|]'
@@ -35,7 +36,7 @@ def main(config):
 		return (unix_abs_path(match.group(1)), match.group(2))
 
 
-	# create output folder
+	# create or clear output folder
 	output_folder = 'output'
 	try:
 		os.mkdir(output_folder)
@@ -69,7 +70,7 @@ def main(config):
 							continue
 
 						processor.add_to_docset(fullpath)
-	processor.generate_doc(output_folder)
+	processor.generate_json_doc(output_folder)
 
 
 
