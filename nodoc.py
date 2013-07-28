@@ -1,6 +1,12 @@
 from nodoc import *
 from nodoc.processors import JavaProcessor
 
+
+import sys
+if sys.version_info <  (2,7):
+	print('need at least python 2.7')
+
+
 def main(config):
 
 	import re
@@ -21,7 +27,6 @@ def main(config):
 			.replace(r'\*', path_character_set + r'+?') 
 		
 		pattern = '^' + pattern + '$'
-		print pattern
 		return re.compile(pattern)
 
 	def unix_abs_path(path):
@@ -31,7 +36,6 @@ def main(config):
 		.format(path_character_set))):
 
 		match = re.match(prefix_matcher, path)
-		print(match.groups())
 		assert len(match.groups()) == 2
 		return (unix_abs_path(match.group(1)), match.group(2))
 

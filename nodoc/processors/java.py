@@ -82,23 +82,30 @@ class JavaHTMLFormatter:
 		"""
 
 		block = JavaHTMLFormatter.javadoc_block_to_html(block, symbol_resolver, False)
+		params = {}
 
 		def collect_param(match): # TODO: do something more useful with it
-			return r'<br><b><font color="green">\1</font> &diams; </b> \2'
-
+			params[match.group(1)] = match.group(2)
+			return ''
 
 		block = re.sub(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',
-			collect_param, block,re.DOTALL)
+			collect_param, block, 0, re.DOTALL)
 
 		block = re.sub(r'@(?:throws?|exception)(.*?)(?=@|\n\s*\n|$)',
 			r'<br><font color="darkred"> &dagger; </font> \1', block,
-			re.DOTALL)
+			0, re.DOTALL)
 
 		block = re.sub(r'@return(.*?)(?=@|\n\s*\n|$)',
 			r'<br><b>&crarr;</b> \1', block,
-			re.DOTALL)
+			0, re.DOTALL)
 
 		block = re.sub(r'@note(.*?)',r'<br> __Note__: \1', block)
+
+		param_text = ""
+		for name, comment in params.items():
+			param_text = param_text + '<br><b><font color="green">'+name+'</font> &diams; </b>' + comment
+
+		block = param_text + block
 		return markdown.markdown(block) if run_markdown else block
 
 
@@ -123,7 +130,7 @@ class JavaMethod:
 
 	@staticmethod
 	def parse_parameters(unparsed_parameter_block):
-		return ['(todo)']
+		return unparsed_parameter_block #['(todo)']
 
 	def get_infoset(self):
 		import copy

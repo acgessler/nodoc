@@ -3,6 +3,23 @@
 <head>
 </head>
 
+<style type="text/css">
+
+.left {
+	float: left;
+	width: 45%;
+	max-width: 45%;
+	overflow-x:auto;
+}
+
+.right {
+	float: right; 
+	width: 45%;
+}
+
+</style>
+
+
 <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
 <script type="text/javascript">
 
@@ -41,13 +58,13 @@
 			}
 		}
 
-		ajax.open("GET",what,true);
+		ajax.open("GET",what + "?nocache=" + new Date().toString(),true);
 		ajax.send(null);
 	}
 
 
 	function run() {
-		fetch_infoset('output/DatagramSocket.json', function(infoset) {
+		fetch_infoset('output/Runtime.json', function(infoset) {
 			var text = '<h2> <font size="-1">' + infoset.access_prefix + ' ' + 
 				infoset.extra_prefix + ' ' +
 				 infoset.type + ' </font>' + 
@@ -55,7 +72,26 @@
 				 infoset.long_desc;
 			$(".left").html(text);
 
-			$(".right").html('TODO');
+			methods = "";
+			for (var name in infoset.members) {
+				var overloads = infoset.members[name];
+
+				for(var i = 0; i < overloads.length; ++i) {
+					var m = overloads[i];
+					methods += '<h3> <font size="-1">' + 
+						m.access_spec + ' ' + 
+						m.extra_spec + ' ' + 
+						m.return_type + ' </font>' + 
+						m.name + ' ( ' + m.parameters + ' )</h3>' +
+						m.comment;
+
+					methods += '<hr>';
+				}
+
+				methods += '<hr>';
+			}
+
+			$(".right").html(methods);
 		});
 	}
 
