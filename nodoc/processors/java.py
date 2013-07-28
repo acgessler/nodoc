@@ -158,7 +158,9 @@ class JavaClass:
 
 	def get_infoset(self):
 		class_info = {}
-		class_info['prefixes'] = self.access_spec + ' ' + self.abstract_final_spec
+		class_info['access_prefix'] = self.access_spec 
+		class_info['extra_prefix'] = self.abstract_final_spec 
+		class_info['type'] = self.class_interface_spec
 		class_info['name'] = self.name
 		class_info['since'] = 'TODO' 
 		class_info['short_desc'] = "TODO"
