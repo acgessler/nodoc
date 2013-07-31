@@ -103,9 +103,9 @@ class JavaHTMLFormatter:
 
 		param_text = ""
 		for name, comment in params.items():
-			param_text = param_text + '<br><b><font color="green">'+name+'</font> &diams; </b>' + comment
+			param_text = param_text + '<br><b><font color="darkblue">'+name+'</font> &diams; </b>' + comment
 
-		block = param_text + block
+		block = param_text + '<br><br>' + block
 		return markdown.markdown(block) if run_markdown else block
 
 

@@ -3,109 +3,24 @@
 <head>
 </head>
 
-<style type="text/css">
+<link href="css/temp_githubstyle.css" rel="stylesheet"></link>
+<link href="css/nodoc.css" rel="stylesheet"></link>
+<link href="css/jquery.mCustomScrollbar.css" rel="stylesheet" type="text/css"></link>
 
-.left {
-	float: left;
-	width: 45%;
-	max-width: 45%;
-	overflow-x:auto;
-}
+<script type="text/javascript" src="jslib/jquery-1.10.1.min.js"></script>
+<script type="text/javascript" src="jslib/jquery.columnizer.js"></script>
+<script type="text/javascript" src="jslib/jquery.mCustomScrollbar.concat.min.js"></script>
 
-.right {
-	float: right; 
-	width: 45%;
-}
+<script type="text/javascript" src="jslib/underscore.js"></script>
+<script type="text/javascript" src="js/nodoc.js"></script>
 
-</style>
-
-
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
-<script type="text/javascript">
-
-	var infoset_cache_waiters = {};
-	var infoset_cache = {};
-
-	// mini ajax fetcher for infosets with caching
-	function fetch_infoset(what, callback) {
-		if(infoset_cache[what]) {
-			callback(infoset_cache[what]);
-		}
-
-		if(infoset_cache_waiters[what]) {
-			infoset_cache_waiters[what].push(callback);
-			return;
-		}
-
-		infoset_cache_waiters[what] = [callback];
-
-		var ajax;
-  		if (window.XMLHttpRequest) {
-	  		ajax = new XMLHttpRequest();
-		}
-		else {
-	  		ajax = new ActiveXObject("Microsoft.XMLHTTP");
-		}
-
-		ajax.onreadystatechange = function() {
-			if (ajax.readyState==4) {
-				var infoset = JSON.parse(ajax.responseText);
-
-				var waiters = infoset_cache_waiters[what];
-				for (var i = 0; i < waiters.length; ++i) {
-					waiters[i](infoset);
-				}
-			}
-		}
-
-		ajax.open("GET",what + "?nocache=" + new Date().toString(),true);
-		ajax.send(null);
-	}
-
-
-	function run() {
-		fetch_infoset('output/Runtime.json', function(infoset) {
-			var text = '<h2> <font size="-1">' + infoset.access_prefix + ' ' + 
-				infoset.extra_prefix + ' ' +
-				 infoset.type + ' </font>' + 
-				 infoset.name + '</h2>' + 
-				 infoset.long_desc;
-			$(".left").html(text);
-
-			methods = "";
-			for (var name in infoset.members) {
-				var overloads = infoset.members[name];
-
-				for(var i = 0; i < overloads.length; ++i) {
-					var m = overloads[i];
-					methods += '<h3> <font size="-1">' + 
-						m.access_spec + ' ' + 
-						m.extra_spec + ' ' + 
-						m.return_type + ' </font>' + 
-						m.name + ' ( ' + m.parameters + ' )</h3>' +
-						m.comment;
-
-					methods += '<hr>';
-				}
-
-				methods += '<hr>';
-			}
-
-			$(".right").html(methods);
-		});
-	}
-
-</script>
-
-<body onload="run();">
-	<link href="temp_githubstyle.css" rel="stylesheet"></link>
+<body onload="run();">	
 
 	<div class="left">
 	</div>
 
 	<div class="right">
 	</div>
-
 
 </body>
 
