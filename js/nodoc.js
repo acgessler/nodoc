@@ -55,7 +55,7 @@ method_index_template = _.template('<hr> <div class="index"><ul> <%= index %> </
 
 
 function run() {
-	fetch_infoset('output/FullDuplexMPI.json', function(infoset) {
+	fetch_infoset('output/Character.json', function(infoset) {
 		var text = '<h1> <font size="-1">' + infoset.access_prefix + ' ' + 
 			infoset.extra_prefix + ' ' +
 			 infoset.type + ' </font>' + 
@@ -89,5 +89,8 @@ function run() {
 		$('.index').columnize({
 			columns: 2
 		});
+
+		$('pre').addClass("prettyprint lang-java");
+		prettyPrint();
 	});
 }
