@@ -82,9 +82,10 @@ class JavaHTMLFormatter:
 		"""
 
 		block = JavaHTMLFormatter.javadoc_block_to_html(block, symbol_resolver, False)
-		params = {}
 
-		def collect_param(match): # TODO: do something more useful with it
+		# extract all parameters and re-order them so they appear at the beginning
+		params = {}
+		def collect_param(match): 
 			params[match.group(1)] = match.group(2)
 			return ''
 
@@ -105,7 +106,7 @@ class JavaHTMLFormatter:
 		for name, comment in params.items():
 			param_text = param_text + '<br><b><font color="darkblue">'+name+'</font> &diams; </b>' + comment
 
-		block = param_text + '<br><br>' + block
+		block = (param_text + '<br><br>' if param_text else '') + block
 		return markdown.markdown(block) if run_markdown else block
 
 
