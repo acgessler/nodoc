@@ -4,6 +4,8 @@ from nodoc import Processor
 import re
 import json
 import markdown
+import os
+
 
 rex = {
 	# matches a javadoc comment on top of a class, along with the class declaration
@@ -191,6 +193,7 @@ class JavaProcessor(Processor):
 	
 	def __init__(self):
 		Processor.__init__(self)
+		self.index = set()
 
 
 	@staticmethod
@@ -235,25 +238,41 @@ class JavaProcessor(Processor):
 			entries = {}
 			self._find_classes(buffer, entries)
 			self.docset[fullpath] = entries
-
+			for k in entries.keys():
+				self.index.add(k)
 
 	def generate_json_doc(self, output_folder):
 		"""
 		Generate json infosets for all entries in the docset
 		"""
-		import os
-		import json
-
 		for fullpath, entities in self.docset.items():
 			for name, entity in entities.items():
-				with open(os.path.join(output_folder, name + ".json"), 'wt') as outp:
+				with open(os.path.join(output_folder, 'class_' + name + ".json"), 'wt') as outp:
 					outp.write(json.dumps(entity.get_infoset(),
 						sort_keys=True,
 						indent=4, 
 						separators=(',', ': ')))
 
+		self._generate_index(output_folder)
+
+
+	def _generate_index(self,  output_folder):
+		"""
+		Generate index.json file
+		"""
+		with open(os.path.join(output_folder, 'index.json'), 'wt') as outp:
+			outp.write(json.dumps(dict( (k,1) for k in self.index),
+				sort_keys=True,
+				indent=4, 
+				separators=(',', ': ')))
+
 
 	def _find_classes(self, buffer, entries):
+		"""
+		Given a text buffer, find all classes (inner and outer), parse them
+		into JavaClass instances and add them indexed by (qualified) name 
+		tio the `entries` dictionary.
+		"""
 		for match in re.finditer(rex['java-class-head'], buffer):
 			end_head = match.end()
 
