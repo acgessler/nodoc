@@ -54,8 +54,8 @@ ctor_index_entry_template = _.template('<li> <a href="#"> &diam; <%= name %> (<%
 method_index_template = _.template('<hr> <div class="index"><ul> <%= index %> </ul></div>');
 
 
-function run() {
-	fetch_infoset('output/class_Object.json', function(infoset) {
+function open_class(file) {
+	fetch_infoset(file, function(infoset) {
 		var text = '<h1> <font size="-1">' + infoset.access_prefix + ' ' + 
 			infoset.extra_prefix + ' ' +
 			 infoset.type + ' </font>' + 
@@ -93,4 +93,30 @@ function run() {
 		$('pre').addClass("prettyprint lang-java");
 		prettyPrint();
 	});
+}
+
+
+function run() {
+
+	// generate search box
+	fetch_infoset('output/index.json', function(index) {
+		elems = [];
+		for (var k in index) {
+			elems.push('<li>'+k+'</li>');
+		}
+
+		var e = $('#live_search');
+		e.html(elems.join(''));
+		e.children('li').hover(function(e) {
+			open_class('output/class_' + $(this).text() + '.json');
+		});
+		$('input[name="search"]').liveUpdate( e );
+
+		$(e).mCustomScrollbar({
+			theme: "dark-thick" 
+		});
+	});
+	
+
+	open_class('output/class_Object.json');
 }
