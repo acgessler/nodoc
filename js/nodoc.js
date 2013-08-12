@@ -1,67 +1,99 @@
-var infoset_cache_waiters = {};
-var infoset_cache = {};
 
-// mini ajax fetcher for infosets with caching
-function fetch_infoset(what, callback) {
-	if(infoset_cache[what]) {
-		callback(infoset_cache[what]);
-	}
 
-	if(infoset_cache_waiters[what]) {
-		infoset_cache_waiters[what].push(callback);
-		return;
-	}
+var fetch_infoset = (function() {
 
-	infoset_cache_waiters[what] = [callback];
+	var infoset_cache_waiters = {};
+	var infoset_cache = {};
 
-	var ajax;
-		if (window.XMLHttpRequest) {
-  		ajax = new XMLHttpRequest();
-	}
-	else {
-  		ajax = new ActiveXObject("Microsoft.XMLHTTP");
-	}
+	// mini ajax fetcher for infosets with caching
+	return function(what, callback) {
+		if(infoset_cache[what]) {
+			callback(infoset_cache[what]);
+		}
 
-	ajax.onreadystatechange = function() {
-		if (ajax.readyState==4) {
-			var infoset = JSON.parse(ajax.responseText);
+		if(infoset_cache_waiters[what]) {
+			infoset_cache_waiters[what].push(callback);
+			return;
+		}
 
-			var waiters = infoset_cache_waiters[what];
-			for (var i = 0; i < waiters.length; ++i) {
-				waiters[i](infoset);
+		infoset_cache_waiters[what] = [callback];
+
+		var ajax;
+			if (window.XMLHttpRequest) {
+	  		ajax = new XMLHttpRequest();
+		}
+		else {
+	  		ajax = new ActiveXObject("Microsoft.XMLHTTP");
+		}
+
+		ajax.onreadystatechange = function() {
+			if (ajax.readyState == 4) {
+				var infoset = JSON.parse(ajax.responseText);
+
+				var waiters = infoset_cache_waiters[what];
+				for (var i = 0; i < waiters.length; ++i) {
+					waiters[i](infoset);
+				}
 			}
 		}
-	}
 
-	ajax.open("GET",what + "?nocache=" + new Date().toString(),true);
-	ajax.send(null);
-}
-
-method_full_template = _.template('<div class="method"> \
-	<div class="method_info <%= access_spec %>"> </div> \
-	<div class="method_info <%= extra_spec %>"> </div> \
-	 <h3> <font size="-1"> \
-	<%= access_spec %> \
-	<%= extra_spec %>  \
-	<%= return_type %> </font> \
-	<%= name %>  \
-	(<%= parameters %>) </h3>  \
-	<%= comment %> <hr> </div>');
-
-method_index_entry_template = _.template('<li> <a href="#"> <%= name %> (<%= parameters %>) </a> </li>');
-ctor_index_entry_template = _.template('<li> <a href="#"> &diam; <%= name %> (<%= parameters %>) </a> </li>');
-
-method_index_template = _.template('<hr> <div class="index"><ul> <%= index %> </ul></div>');
+		ajax.open("GET",what + "?nocache=" + new Date().toString(),true);
+		ajax.send(null);
+	};
+}) ();
 
 
-function open_class(file) {
+
+method_full_template = _.template(
+	'<div class="method"> ' +
+		'<div class="method_info <%= access_spec %>"> </div> ' +
+		'<div class="method_info <%= extra_spec %>"> </div> ' +
+		'<h3> '+
+			'<font size="-1"> ' +
+				'<%= access_spec %> ' +
+				'<%= extra_spec %>  ' +
+				'<%= return_type %> ' +
+			'</font> ' +
+			'<%= name %>  ' +
+			'(<%= parameters %>) '+
+		'</h3>  ' +
+		'<%= comment %> <hr> '+
+	'</div>');
+
+class_template = _.template(
+	'<h1> ' +
+		'<font size="-1">' + 
+			'<%= access_prefix %> <%= extra_prefix %> <%= type %> '+
+		'</font> '+
+		'<%= name %> '+
+	'</h1> '+
+	'<%= long_desc %>');
+
+method_index_entry_template = _.template(
+	'<li> '+
+		'<a href="#"> '+
+			'<%= name %> (<%= parameters %>) '+
+		'</a>'+
+	'</li>');
+
+ctor_index_entry_template = _.template(
+	'<li>'+
+		'<a href="#">'+
+			'&diam; <%= name %> (<%= parameters %>) '+
+		'</a>'+
+	'</li>');
+
+method_index_template = _.template('<hr>'+
+	'<div class="index">'+
+		'<ul>'+
+			'<%= index %>'+
+		'</ul>'+
+	'</div>');
+
+
+function open_class(file, completion) {
 	fetch_infoset(file, function(infoset) {
-		var text = '<h1> <font size="-1">' + infoset.access_prefix + ' ' + 
-			infoset.extra_prefix + ' ' +
-			 infoset.type + ' </font>' + 
-			 infoset.name + '</h1>' + 
-			 infoset.long_desc;
-		
+		var text = class_template(infoset);
 
 		var method_index = "";
 		var methods = "";
@@ -92,12 +124,15 @@ function open_class(file) {
 
 		$('pre').addClass("prettyprint lang-java");
 		prettyPrint();
+
+		if(completion) {
+			completion();
+		}
 	});
 }
 
 
 function run() {
-
 	// generate search box
 	fetch_infoset('output/index.json', function(index) {
 		elems = [];
