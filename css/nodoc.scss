@@ -6,13 +6,15 @@ $image_path : "../img";
     top: 20;
     left: 100;
 
-	width: 400px;
+	width: 35%;
 	height: 32px;
 }
 
 #live_search {
+	display: none;
+
 	cursor: pointer;
-	width: 400px;
+	width: 35%;
     height: 100%;
     max-height: 400px;
     position: absolute;

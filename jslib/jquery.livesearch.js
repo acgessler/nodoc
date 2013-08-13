@@ -1,4 +1,4 @@
-jQuery.fn.liveUpdate = function(list){
+jQuery.fn.liveUpdate = function(list, on_update){
 	list = jQuery(list);
 
 	if ( list.length ) {
@@ -33,5 +33,9 @@ jQuery.fn.liveUpdate = function(list){
 				jQuery(rows[ this[1] ]).show();
 			});
 		}
+		if(on_update) {
+			on_update();
+		}
+		return true;
 	}
 };
