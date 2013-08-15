@@ -1,5 +1,6 @@
 
 $(document).ready(function() {
+  
   describe("nodoc", function() {
 
     var doc;

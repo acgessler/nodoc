@@ -1,6 +1,20 @@
 
 $image_path : "../img";
 
+.loading
+ {
+ 	width: 100%;
+ 	height: 50%;
+ 	top: 0px;
+ 	background-image:url(#{$image_path}/loading.gif);
+ 	background-repeat:no-repeat;
+ 	background-position:center;
+
+ 	text-align: center;
+	vertical-align: middle;
+	padding-top:30%; 
+ }
+
 #searchbox {
 	position: absolute;
     top: 20;

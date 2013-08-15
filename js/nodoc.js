@@ -9,6 +9,8 @@ return function(settings) {
 		base_folder = base_folder + '/';
 	}
 
+	var fade_speed_multiplier = settings.fade_speed_multiplier || 1.0;
+
 
 	var fetch_infoset = (function() {
 
@@ -19,6 +21,7 @@ return function(settings) {
 		return function(what, callback) {
 			if(infoset_cache[what]) {
 				callback(infoset_cache[what]);
+				return;
 			}
 
 			if(infoset_cache_waiters[what]) {
@@ -42,6 +45,7 @@ return function(settings) {
 					if(ajax.status === 200) {
 						infoset = JSON.parse(ajax.responseText);
 					}
+					infoset_cache[what] = infoset;
 					var waiters = infoset_cache_waiters[what];
 					for (var i = 0; i < waiters.length; ++i) {
 						waiters[i](infoset);
@@ -101,30 +105,105 @@ return function(settings) {
 			'</ul>'+
 		'</div>');
 
+	var loading_template = _.template('<div class="loading"> <%= text %> </div>');
 
-	var set_view = function(left, right) {
-		$(".left").html(left);
-		$(".right").html(right);
+	var ui = (function() {
+		function ViewPlane(str_selector) {
 
-		$(".left, .right").mCustomScrollbar({
-			theme: "dark-thick" 
-		});
-	};
+			var successor = null;
+			var page_stack = [];
+
+			this.set = function(contents, no_scrollbars, no_fade) {
+				var new_successor =  {
+					contents 		: contents,
+					no_scrollbars 	: no_scrollbars,
+					no_fade 		: no_fade
+				};
+
+				if (successor !== null) {
+					successor = new_successor;
+					return;
+				}
+
+				var $elem = $(str_selector);
+				var duration = 200 * fade_speed_multiplier;
+
+				successor = new_successor;
+				$elem.fadeOut(duration, function() {
+					$elem.html(successor.contents);
+
+					if (!successor.no_scrollbars) {
+						$elem.mCustomScrollbar({
+							theme: "dark-thick" 
+						});
+					}
+
+					$elem.fadeIn(successor.no_fade ? 0 : duration);
+					successor = null;
+				});
+			};
+
+			this.push = function(contents) {
+				this.set(contents);
+				page_stack.push([$(str_selector).clone(true)]);
+			};
+
+			this.pop = function() {
+				page_stack.pop();
+				var elem = page_stack[page_stack.length - 1];
+				$(str_selector).replaceWith(elem);
+			};
+		};
 
 
-	var page_stack = [];
-	var push_view = this.push_view = function(left, right) {
+		function ViewPlaneManager() {
+		
+			var _left = new ViewPlane(".left");
+			var _right = new ViewPlane(".right");
 
-		set_view(left, right);
-		page_stack.push([$(".left").clone(true),$(".right").clone(true)]);
-	};
+			this.left = function() {
+				return _left;
+			};
+
+			this.right = function() {
+				return _right;
+			};
+
+			this.set = function(left, right, no_scrollbars, no_fade) {
+				if(left !== null) {
+					_left.set(left, no_scrollbars, no_fade);
+				}
+				if(right !== null) {
+					_right.set(right, no_scrollbars, no_fade);
+				}
+			};
+
+			this.push = function(left, right) {
+				_left.push(left);
+				_right.push(right);
+			};
 
 
-	var pop_view = this.pop_view = function() {
-		page_stack.pop();
-		var elem = page_stack[page_stack.length - 1];
-		$(".left") .replaceWith(elem[0]);
-		$(".right").replaceWith(elem[1]);
+			this.pop = function() {
+				_left.pop();
+				_right.pop();
+			};
+
+		};
+
+		return {
+			  ViewPlaneManager : ViewPlaneManager
+			, ViewPlane : ViewPlane
+		};
+	})();
+
+
+	var view_planes = new ui.ViewPlaneManager();
+
+	
+
+	var get_loading_html = function() {
+		return loading_template({text:'Loading Preview'});
 	};
 
 
@@ -132,6 +211,11 @@ return function(settings) {
 		settings = settings || {};
 
 		var full_view = settings.full_view === undefined ? true : settings.full_view;
+		var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
+
+		if(show_loading) {
+			view_planes.set(null, get_loading_html(), true );
+		}
 
 		fetch_infoset(file, function(infoset) {
 			if (!infoset) {
@@ -161,10 +245,10 @@ return function(settings) {
 			var class_main_page = text + method_index_template({ index : method_index});
 
 			if (full_view) {
-				push_view(class_main_page, methods);
+				view_planes.push(class_main_page, methods);
 			}
 			else {
-				push_view('', class_main_page);
+				view_planes.push('', class_main_page);
 			}
 			
 			$('.index li').addClass("dontsplit"); 
@@ -197,7 +281,7 @@ return function(settings) {
 				.on('input', function() {
 					if(!e.is(":visible")) {
 						e.show({
-							  duration: 300
+							  duration: 300 * fade_speed_multiplier
 							, done: function() {
 								e.mCustomScrollbar({
 									theme: "dark-thick" 
@@ -219,7 +303,7 @@ return function(settings) {
 
 					.click(function() {
 						e.hide({
-							duration: 300
+							duration: 300 * fade_speed_multiplier
 						});
 						var settings = {
 							full_view : true
