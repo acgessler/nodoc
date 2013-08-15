@@ -1,5 +1,5 @@
 
-var DocumentationViewer = (function(undefined) { 
+var DocumentationViewer = (function($, undefined) { 
 	
 return function(settings) {
 	settings = settings || {};
@@ -108,7 +108,7 @@ return function(settings) {
 	var loading_template = _.template('<div class="loading"> <%= text %> </div>');
 
 	// namespace for User-Interface utilities
-	var ui = (function() {
+	var ui = this.ui = (function() {
 
 		// ----------------------------------------------------------------------------------------
 		/** Represents a UI plane that can be dynamically filled with content */
@@ -118,17 +118,15 @@ return function(settings) {
 			var successor = null;
 			var page_stack = [];
 
-			this.set = function(contents, no_scrollbars, no_fade) {
+			this.set = function(contents, settings) {
 
 				if(_.isString(contents)) {
 					contents = $(contents);
 				}
 
-				var new_successor =  {
-					contents 		: contents,
-					no_scrollbars 	: no_scrollbars,
-					no_fade 		: no_fade
-				};
+				var new_successor = $.extend( {
+					contents : contents,
+				}, settings );
 
 				if (successor !== null) {
 					successor = new_successor;
@@ -184,18 +182,18 @@ return function(settings) {
 				return _right;
 			};
 
-			this.set = function(left, right, no_scrollbars, no_fade) {
+			this.set = function(left, right, settings) {
 				if(left !== null) {
-					_left.set(left, no_scrollbars, no_fade);
+					_left.set(left, settings);
 				}
 				if(right !== null) {
-					_right.set(right, no_scrollbars, no_fade);
+					_right.set(right, settings);
 				}
 			};
 
-			this.push = function(left, right) {
-				_left.push(left);
-				_right.push(right);
+			this.push = function(left, right, settings) {
+				_left.push(left, settings);
+				_right.push(right, settings);
 			};
 
 
@@ -203,7 +201,6 @@ return function(settings) {
 				_left.pop();
 				_right.pop();
 			};
-
 		};
 
 		return {
@@ -217,7 +214,7 @@ return function(settings) {
 
 
 	// namespace for View components - mostly renderers for different types of Java entities
-	var view = (function() {
+	var view = this.view = (function() {
 
 		// ----------------------------------------------------------------------------------------
 		/** Generates the HTML/DOM for one class info file */
@@ -285,7 +282,7 @@ return function(settings) {
 
 			/** Show a preview of the class - a short brief - on the right view plane */
 			this.preview = function(view_plane_manager) {
-				view_plane_manager.push('', get_class_main_page());
+				view_plane_manager.set('', get_class_main_page());
 				// TODO: do async and narrow down focus
 				prettyPrint();
 			};
@@ -319,7 +316,9 @@ return function(settings) {
 		var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
 
 		if(show_loading) {
-			view_planes.set(null, get_loading_html(), true );
+			view_planes.set(null, get_loading_html(), {
+				no_scollbars : true,
+			} );
 		}
 
 		fetch_infoset(file, function(infoset) {
@@ -344,6 +343,15 @@ return function(settings) {
 		});
 	};
 
+	this.push_view = function(left, right) {
+		view_planes.push(left, right);
+	};
+
+	this.pop_view = function() {
+		view_planes.pop();
+	};
+
+
 	if(!settings.no_search) {
 		// generate search box logic
 		var index = fetch_infoset('output/index.json', function(index) {
@@ -354,7 +362,6 @@ return function(settings) {
 
 			var e = $('#live_search');
 			e.html(elems.join(''));
-
 
 			$('#searchbox')
 				.on('input', function() {
@@ -394,10 +401,10 @@ return function(settings) {
 		});
 	}
 }; 
-})();
+})(jQuery);
 
 
 function run() {
 	var doc = new DocumentationViewer();
-	doc.open_class('output/class_Object.json');
+	doc.open_class('output/class_Window.json');
 }
