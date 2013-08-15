@@ -244,14 +244,14 @@ return function(settings) {
 						// put together written doc and methods index
 						var text = class_template(infoset);
 						var index = builder.join('');
-						class_main_page = $(text + method_index_template({ index : index }));
+						class_main_page = $('<div>' + text + method_index_template({ index : index }) + '</div>');
 
 						// fix up list formatting
 						class_main_page.find('.index li').addClass("dontsplit");
-						class_main_page.find('.index').columnize({
-							columns: 2
-						});
-
+						//class_main_page.find('.index').columnize({
+						//	columns: 2
+						//});
+				
 						// and prepare for syntax highlighting
 						class_main_page.find('pre').addClass("prettyprint lang-java");
 					}
@@ -286,6 +286,8 @@ return function(settings) {
 			/** Show a preview of the class - a short brief - on the right view plane */
 			this.preview = function(view_plane_manager) {
 				view_plane_manager.push('', get_class_main_page());
+				// TODO: do async and narrow down focus
+				prettyPrint();
 			};
 
 
@@ -347,7 +349,7 @@ return function(settings) {
 		var index = fetch_infoset('output/index.json', function(index) {
 			elems = [];
 			for (var k in index) {
-				elems.push('<li>'+k+'</li>');
+				elems.push('<li> '+k+' <font size="-1" color="grey"> '+ ' <i>Class Object is the root of the class hierarchy</i></font>' +'</li>');
 			}
 
 			var e = $('#live_search');
