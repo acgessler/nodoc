@@ -107,13 +107,23 @@ return function(settings) {
 
 	var loading_template = _.template('<div class="loading"> <%= text %> </div>');
 
+	// namespace for User-Interface utilities
 	var ui = (function() {
+
+		// ----------------------------------------------------------------------------------------
+		/** Represents a UI plane that can be dynamically filled with content */
+		// ----------------------------------------------------------------------------------------
 		function ViewPlane(str_selector) {
 
 			var successor = null;
 			var page_stack = [];
 
 			this.set = function(contents, no_scrollbars, no_fade) {
+
+				if(_.isString(contents)) {
+					contents = $(contents);
+				}
+
 				var new_successor =  {
 					contents 		: contents,
 					no_scrollbars 	: no_scrollbars,
@@ -130,7 +140,8 @@ return function(settings) {
 
 				successor = new_successor;
 				$elem.fadeOut(duration, function() {
-					$elem.html(successor.contents);
+					$elem.empty();
+					$elem.append(successor.contents);
 
 					if (!successor.no_scrollbars) {
 						$elem.mCustomScrollbar({
@@ -156,6 +167,10 @@ return function(settings) {
 		};
 
 
+		// ----------------------------------------------------------------------------------------
+		/** Manages the standard view plane layout, which has a view plane on
+		 *  the left and one on the right.  */
+		 // ----------------------------------------------------------------------------------------
 		function ViewPlaneManager() {
 		
 			var _left = new ViewPlane(".left");
@@ -200,6 +215,94 @@ return function(settings) {
 
 	var view_planes = new ui.ViewPlaneManager();
 
+
+	// namespace for View components - mostly renderers for different types of Java entities
+	var view = (function() {
+
+		// ----------------------------------------------------------------------------------------
+		/** Generates the HTML/DOM for one class info file */
+		// ----------------------------------------------------------------------------------------
+		function ClassRenderer(infoset) {
+
+			// Get a string with the method index of the class
+			var get_class_main_page = (function() {
+				var class_main_page = null;
+				return function() {
+					if(class_main_page == null) {
+						// build methods index
+						var builder = [];
+						for (var name in infoset.members) {
+							var overloads = infoset.members[name];
+
+							for(var i = 0; i < overloads.length; ++i) {	
+								builder.push((name === infoset.name 
+									? ctor_index_entry_template 
+									: method_index_entry_template )(overloads[i]));
+							}
+						}
+						
+						// put together written doc and methods index
+						var text = class_template(infoset);
+						var index = builder.join('');
+						class_main_page = $(text + method_index_template({ index : index }));
+
+						// fix up list formatting
+						class_main_page.find('.index li').addClass("dontsplit");
+						class_main_page.find('.index').columnize({
+							columns: 2
+						});
+
+						// and prepare for syntax highlighting
+						class_main_page.find('pre').addClass("prettyprint lang-java");
+					}
+
+					return class_main_page;
+				}
+			})();
+
+			// Get a jq DOM fragment with the full methods documentation for the class
+			var get_methods = (function() {
+				var methods = null;
+				return function() {
+					if(methods == null) {
+						var builder = [];
+						for (var name in infoset.members) {
+							var overloads = infoset.members[name];
+
+							for(var i = 0; i < overloads.length; ++i) {
+								builder.push(method_full_template(overloads[i]));
+							}
+						}
+						methods = $(builder.join(''));
+					}
+
+					return methods;
+				}
+			})();
+
+			
+		
+
+			/** Show a preview of the class - a short brief - on the right view plane */
+			this.preview = function(view_plane_manager) {
+				view_plane_manager.push('', get_class_main_page());
+			};
+
+
+			/** Open the full class view in both planes */
+			this.push = function(view_plane_manager) {
+				view_plane_manager.push(get_class_main_page(), get_methods());
+				// TODO: do async and narrow down focus
+				prettyPrint();
+			};
+		}
+
+
+		return {
+			ClassRenderer : ClassRenderer
+		};
+	})();
+
 	
 
 	var get_loading_html = function() {
@@ -210,7 +313,7 @@ return function(settings) {
 	var open_class = this.open_class = function(file, completion, settings) {
 		settings = settings || {};
 
-		var full_view = settings.full_view === undefined ? true : settings.full_view;
+		var preview = settings.preview || false;
 		var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
 
 		if(show_loading) {
@@ -224,40 +327,14 @@ return function(settings) {
 				}	
 				return;
 			}
-			var text = class_template(infoset);
+			var renderer = new view.ClassRenderer(infoset);
 
-			var method_index = "";
-			var methods = "";
-			for (var name in infoset.members) {
-				var overloads = infoset.members[name];
-
-				for(var i = 0; i < overloads.length; ++i) {
-					var m = overloads[i];
-					
-					method_index += (name === infoset.name 
-						? ctor_index_entry_template 
-						: method_index_entry_template )(m);
-
-					methods += method_full_template(m);
-				}
-			}
-
-			var class_main_page = text + method_index_template({ index : method_index});
-
-			if (full_view) {
-				view_planes.push(class_main_page, methods);
+			if(preview) {
+				renderer.preview(view_planes);
 			}
 			else {
-				view_planes.push('', class_main_page);
+				renderer.push(view_planes);
 			}
-			
-			$('.index li').addClass("dontsplit"); 
-			$('.index').columnize({
-				columns: 2
-			});
-
-			$('pre').addClass("prettyprint lang-java");
-			prettyPrint();
 
 			if(completion) {
 				completion(true);
@@ -296,7 +373,7 @@ return function(settings) {
 				e.children('li')
 					.hover(function() {
 						var settings = {
-							full_view : false
+							preview : true
 						};
 						open_class('output/class_' + $(this).text() + '.json', function() {}, settings);
 					})
@@ -306,7 +383,7 @@ return function(settings) {
 							duration: 300 * fade_speed_multiplier
 						});
 						var settings = {
-							full_view : true
+							preview : false
 						};
 						open_class('output/class_' + $(this).text() + '.json', function() {}, settings);
 					});
