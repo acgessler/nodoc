@@ -1,3 +1,18 @@
+body {
+  background-image: url(../img/background.png);
+  background-repeat: repeat-x;
+  background-position: top;
+}
+
+#logo {
+  background-image: url(../img/logo.png);
+  width: 64px;
+  height: 64px;
+  top: 5px;
+  left: 15px;
+  position: absolute;
+}
+
 .loading {
   width: 100%;
   height: 50%;
@@ -11,11 +26,29 @@
 }
 
 #searchbox {
+  padding: 2px;
   position: absolute;
   top: 20;
   left: 100;
   width: 35%;
   height: 32px;
+  font-size: 16px;
+  box-shadow: 0 0 10px #eeeeee;
+  border-width: 1px;
+  border-color: #f5f5f5;
+}
+
+li.search_entry_java_class span {
+  padding-right: 10px;
+}
+li.search_entry_java_class span.class_brief {
+  color: #999999;
+  font-size: 12px;
+}
+li.search_entry_java_class span.class_package {
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+  font-size: 10px;
+  color: #999999;
 }
 
 #live_search {
@@ -45,6 +78,7 @@
 .left, .right {
   padding: 0px;
   margin: 0px;
+  margin-top: 15px;
   overflow: auto;
   height: 100%;
 }

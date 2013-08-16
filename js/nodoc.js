@@ -107,6 +107,20 @@ return function(settings) {
 
 	var loading_template = _.template('<div class="loading"> <%= text %> </div>');
 
+
+	var index_entry_java_class_template = _.template(
+		'<li class="search_entry_java_class">' + 
+			'<span class="class_name">' +
+				'<%= name %>' +
+			'</span>' +
+			'<span class="class_package">' +
+				'<%= package %>' +
+			'</span>' +
+			'<span class="class_brief">' +
+				'<%= brief %>' +
+			'</span>' +
+		'</li>');
+
 	// namespace for User-Interface utilities
 	var ui = this.ui = (function() {
 
@@ -364,15 +378,21 @@ return function(settings) {
 		var index = fetch_infoset('output/index.json', function(index) {
 			elems = [];
 			for (var k in index) {
-				elems.push('<li> '+k+' <font size="-1" color="grey"> '+ ' <i>Class Object is the root of the class hierarchy</i></font>' +'</li>');
+				elems.push(index_entry_java_class_template({
+					  name    : k
+					, package : 'java.blubb'
+					, brief : 'This is important'
+				}));
 			}
 
 			var e = $('#live_search');
 			e.html(elems.join(''));
 
+			var closed = true;
 			$('#searchbox')
 				.on('input', function() {
 					if(!e.is(":visible")) {
+						closed = false;
 						e.show({
 							  duration: 300 * fade_speed_multiplier
 							, done: function() {
@@ -386,24 +406,31 @@ return function(settings) {
 				})
 				.liveUpdate( e, function() {
 
-				e.children('li')
-					.hover(function() {
-						var settings = {
-							preview : true
-						};
-						open_class('output/class_' + $(this).text() + '.json', function() {}, settings);
-					})
+					e.find('li.search_entry_java_class')
+						.hover(function() {
+							if(closed) {
+								return;
+							}
+							var settings = {
+								preview : true
+							};
+							var name = $(this).children('span.class_name').text();
+							open_class('output/class_' + name + '.json', function() {}, settings);
+						})
 
-					.click(function() {
-						e.hide({
-							duration: 300 * fade_speed_multiplier
+						.click(function() {
+							closed = true;
+							e.hide({
+								duration: 300 * fade_speed_multiplier
+							});
+							var settings = {
+								preview : false
+							};
+							var name = $(this).children('span.class_name').text();
+							open_class('output/class_' + name + '.json', function() {}, settings);
 						});
-						var settings = {
-							preview : false
-						};
-						open_class('output/class_' + $(this).text() + '.json', function() {}, settings);
-					});
-				} );
+					} 
+				);
 			;
 		});
 	}
