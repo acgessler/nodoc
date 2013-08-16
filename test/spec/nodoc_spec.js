@@ -49,17 +49,17 @@ $(document).ready(function() {
 
     // ------------------------------------------------------------------------------
     it("should be able to push and pop a view", function() {
-      doc.push_view('<div id="test_l">','<div id="test_r">');
+      doc.push_view('<div id="test_l">','<div id="test_r">', {no_fade:true});
       expect($("#test_l").length).toBe(1);
       expect($("#test_r").length).toBe(1);
 
-      doc.push_view('<div id="test_l2">','<div id="test_r2">');
+      doc.push_view('<div id="test_l2">','<div id="test_r2">', {no_fade:true});
       expect($("#test_l2").length).toBe(1);
       expect($("#test_r2").length).toBe(1);
       expect($("#test_l").length).toBe(0);
       expect($("#test_r").length).toBe(0);
     
-      doc.pop_view();
+      doc.pop_view({no_fade:true});
       expect($("#test_l").length).toBe(1);
       expect($("#test_r").length).toBe(1);
     });

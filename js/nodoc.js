@@ -137,7 +137,8 @@ return function(settings) {
 				var duration = 200 * fade_speed_multiplier;
 
 				successor = new_successor;
-				$elem.fadeOut(duration, function() {
+
+				var commit = function() {
 					$elem.empty();
 					$elem.append(successor.contents);
 
@@ -147,17 +148,27 @@ return function(settings) {
 						});
 					}
 
+					// TODO: do async and narrow down focus
+					prettyPrint();
+
 					$elem.fadeIn(successor.no_fade ? 0 : duration);
 					successor = null;
-				});
+				};
+
+				if (successor.no_fade) {
+					commit();
+				}
+				else {
+					$elem.fadeOut(duration, commit);
+				}
 			};
 
-			this.push = function(contents) {
-				this.set(contents);
+			this.push = function(contents, settings) {
+				this.set(contents, settings);
 				page_stack.push([$(str_selector).clone(true)]);
 			};
 
-			this.pop = function() {
+			this.pop = function(settings) {
 				page_stack.pop();
 				var elem = page_stack[page_stack.length - 1];
 				$(str_selector).replaceWith(elem);
@@ -197,9 +208,9 @@ return function(settings) {
 			};
 
 
-			this.pop = function() {
-				_left.pop();
-				_right.pop();
+			this.pop = function(settings) {
+				_left.pop(settings);
+				_right.pop(settings);
 			};
 		};
 
@@ -281,18 +292,14 @@ return function(settings) {
 		
 
 			/** Show a preview of the class - a short brief - on the right view plane */
-			this.preview = function(view_plane_manager) {
+			this.preview_to = function(view_plane_manager) {
 				view_plane_manager.set('', get_class_main_page());
-				// TODO: do async and narrow down focus
-				prettyPrint();
 			};
 
 
 			/** Open the full class view in both planes */
-			this.push = function(view_plane_manager) {
+			this.push_to = function(view_plane_manager) {
 				view_plane_manager.push(get_class_main_page(), get_methods());
-				// TODO: do async and narrow down focus
-				prettyPrint();
 			};
 		}
 
@@ -331,10 +338,10 @@ return function(settings) {
 			var renderer = new view.ClassRenderer(infoset);
 
 			if(preview) {
-				renderer.preview(view_planes);
+				renderer.preview_to(view_planes);
 			}
 			else {
-				renderer.push(view_planes);
+				renderer.push_to(view_planes);
 			}
 
 			if(completion) {
@@ -343,12 +350,12 @@ return function(settings) {
 		});
 	};
 
-	this.push_view = function(left, right) {
-		view_planes.push(left, right);
+	this.push_view = function(left, right, settings) {
+		view_planes.push(left, right, settings);
 	};
 
-	this.pop_view = function() {
-		view_planes.pop();
+	this.pop_view = function(settings) {
+		view_planes.pop(settings);
 	};
 
 

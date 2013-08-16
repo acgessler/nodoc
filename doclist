@@ -1,4 +1,5 @@
 #../../caas--*/?/*.java
 J:\dev\jdksource\java\lang\*.java
-#J:\dev\jdksource\java\io\*.java
+J:\dev\jdksource\java\io\*.java
+J:\dev\jdksource\java\awt\*.java
 # test.java
