@@ -421,7 +421,7 @@ return function(settings) {
 					return true;
 				})
 				.liveUpdate( e, function() {
-
+					e.mCustomScrollbar("update");
 					e.find('li.search_entry_java_class')
 						.hover(function() {
 							if(closed) {
