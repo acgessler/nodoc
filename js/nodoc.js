@@ -142,6 +142,8 @@ return function(settings) {
 					contents : contents,
 				}, settings );
 
+				// if we are already fading to another page, just keep that
+				// transition but make it transit to the new "next" page.
 				if (successor !== null) {
 					successor = new_successor;
 					return;
@@ -156,16 +158,30 @@ return function(settings) {
 					$elem.empty();
 					$elem.append(successor.contents);
 
-					if (!successor.no_scrollbars) {
+					var successor_copy = successor;
+					if (!successor_copy.no_scrollbars) {
 						$elem.mCustomScrollbar({
-							theme: "dark-thick" 
+						  	theme: "dark-thick"
+						  	, mouseWheelPixels: 600 
+							, scrollButtons: {
+      							  enable: true
+    						}
 						});
 					}
 
-					// TODO: do async and narrow down focus
-					prettyPrint();
+					var commit = function() {
+						$elem.mCustomScrollbar("update");
 
-					$elem.fadeIn(successor.no_fade ? 0 : duration);
+						// TODO: do async and narrow down focus
+						prettyPrint();
+					};
+
+					if(successor.no_fade) {
+						commit();
+					}
+					else {
+						$elem.fadeIn(duration, commit);
+					}
 					successor = null;
 				};
 
