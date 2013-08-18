@@ -16,6 +16,10 @@ body {
 	background-position: top;
 }
 
+tt, code {
+	font-family: #{$monospace_fonts};
+}
+
 #logo {
  	background-image:url(#{$image_path}/logo.png);
  	width: 64px;

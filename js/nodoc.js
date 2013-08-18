@@ -60,7 +60,7 @@ return function(settings) {
 
 
 	var method_full_template = _.template(
-		'<div class="method" data-link="<%= link_info %>" id="method_<%= index_in_class %>"> ' +
+		'<div class="method" id="<%= link_info %>"> ' +
 			'<div class="method_info <%= access_spec %>"> </div> ' +
 			'<div class="method_info <%= extra_spec %>"> </div> ' +
 			'<h3> '+
@@ -86,14 +86,14 @@ return function(settings) {
 
 	var method_index_entry_template = _.template(
 		'<li> '+
-			'<a href="#" data-link="<%= link_info %>"> '+
+			'<a href="<%= link_info %>"> '+
 				'<%= name %> (<%= parameters %>) '+
 			'</a>'+
 		'</li>');
 
 	var ctor_index_entry_template = _.template(
 		'<li>'+
-			'<a href="#">'+
+			'<a href="">'+
 				'&diam; <%= name %> (<%= parameters %>) '+
 			'</a>'+
 		'</li>');
@@ -269,7 +269,7 @@ return function(settings) {
 		function ClassRenderer(infoset) {
 
 			var get_method_link_name = function(name, index) {
-				return name + '#' + index;
+				return 'method_' + name + '_' + index;
 			};
 
 			// Get a string with the method index of the class
@@ -361,16 +361,15 @@ return function(settings) {
 				// establish link handlers to resolve methods
 				class_main_page.find('a').each(function() {
 					var $this = $(this);
-					var target = $this.data('link');
+					var target = $this.attr('href');
 
 					$this.hover(function() {
 						// resolve the link
-						var link = $('div[data-link="'+target+'"]');
+						var link = $('#' + target);
 						if(link.length === 0) {
 							// ignore, but maybe log (TODO)
 							return;
 						}
-
 						view_plane_manager.right().scrollTo(link, {
 							scrollInertia : 105
 						});
