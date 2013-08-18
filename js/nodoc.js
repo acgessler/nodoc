@@ -260,13 +260,42 @@ return function(settings) {
 	var view_planes = new ui.ViewPlaneManager();
 
 
+	// namespace for Controller components - mostly actions for different kinds of UI entities
+	var controller = this.controller = (function() {
+
+		// ----------------------------------------------------------------------------------------
+		/**  */
+		// ----------------------------------------------------------------------------------------
+		function ClassController(infoset) {
+
+			this.select_method = function(view_plane_manager, target) {
+				// resolve the link
+				var link = $('#' + target);
+				if(link.length === 0) {
+					// ignore, but maybe log (TODO)
+					return;
+				}
+				view_plane_manager.right().scrollTo(link, {
+					scrollInertia : 105
+				});
+			}
+		};
+
+		return {
+			ClassController : ClassController
+		};
+	})();
+
+
 	// namespace for View components - mostly renderers for different types of Java entities
 	var view = this.view = (function() {
 
 		// ----------------------------------------------------------------------------------------
 		/** Generates the HTML/DOM for one class info file */
 		// ----------------------------------------------------------------------------------------
-		function ClassRenderer(infoset) {
+		function ClassRenderer(infoset, controller_inst) {
+
+			controller_inst = controller_inst || new controller.ClassController();
 
 			var get_method_link_name = function(name, index) {
 				return 'method_' + name + '_' + index;
@@ -297,12 +326,15 @@ return function(settings) {
 						// put together written doc and methods index
 						var text = class_template(infoset);
 						var index = builder.join('');
+
+						// wrapping it in a div is necessary to be able to use find() on the
+						// returned jQuery selector. Using filter() and stuff should 
+						// theoreticaly also work without the container, but causes weird
+						// scrollbar problems.
 						class_main_page = $('<div>' + text + method_index_template({ index : index }) + '</div>');
 
 						// fix up list formatting
 						class_main_page.find('.index li').addClass("dontsplit");
-
-
 						
 						// TODO: does not work
 						//class_main_page.find('.index').columnize({
@@ -312,7 +344,6 @@ return function(settings) {
 						// and prepare for syntax highlighting
 						class_main_page.find('pre').addClass("prettyprint lang-java");
 					}
-
 					return class_main_page;
 				}
 			})();
@@ -364,15 +395,7 @@ return function(settings) {
 					var target = $this.attr('href');
 
 					$this.hover(function() {
-						// resolve the link
-						var link = $('#' + target);
-						if(link.length === 0) {
-							// ignore, but maybe log (TODO)
-							return;
-						}
-						view_plane_manager.right().scrollTo(link, {
-							scrollInertia : 105
-						});
+						controller_inst.select_method(view_plane_manager, target);
 					});
 				});
 			};
