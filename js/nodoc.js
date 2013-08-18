@@ -60,7 +60,7 @@ return function(settings) {
 
 
 	var method_full_template = _.template(
-		'<div class="method"> ' +
+		'<div class="method" data-link="<%= link_info %>" id="method_<%= index_in_class %>"> ' +
 			'<div class="method_info <%= access_spec %>"> </div> ' +
 			'<div class="method_info <%= extra_spec %>"> </div> ' +
 			'<h3> '+
@@ -86,7 +86,7 @@ return function(settings) {
 
 	var method_index_entry_template = _.template(
 		'<li> '+
-			'<a href="#"> '+
+			'<a href="#" data-link="<%= link_info %>"> '+
 				'<%= name %> (<%= parameters %>) '+
 			'</a>'+
 		'</li>');
@@ -203,6 +203,12 @@ return function(settings) {
 				var elem = page_stack[page_stack.length - 1];
 				$(str_selector).replaceWith(elem);
 			};
+
+			this.scrollTo = function(selector, settings) {
+				// have to get the ID because scrollTo does not accept arbitrary jQuery selectors
+				var el_id = '#' + $(selector).first().attr('id');
+				$(str_selector).mCustomScrollbar("scrollTo",el_id, settings);
+			}
 		};
 
 
@@ -262,6 +268,10 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function ClassRenderer(infoset) {
 
+			var get_method_link_name = function(name, index) {
+				return name + '#' + index;
+			};
+
 			// Get a string with the method index of the class
 			var get_class_main_page = (function() {
 				var class_main_page = null;
@@ -272,10 +282,15 @@ return function(settings) {
 						for (var name in infoset.members) {
 							var overloads = infoset.members[name];
 
-							for(var i = 0; i < overloads.length; ++i) {	
+							for(var i = 0; i < overloads.length; ++i) {
+								var data = overloads[i];
+								var params = $.extend({
+									link_info : get_method_link_name(data.name, i)
+								}, data);	
+
 								builder.push((name === infoset.name 
 									? ctor_index_entry_template 
-									: method_index_entry_template )(overloads[i]));
+									: method_index_entry_template)(params));
 							}
 						}
 						
@@ -286,6 +301,10 @@ return function(settings) {
 
 						// fix up list formatting
 						class_main_page.find('.index li').addClass("dontsplit");
+
+
+						
+						// TODO: does not work
 						//class_main_page.find('.index').columnize({
 						//	columns: 2
 						//});
@@ -304,11 +323,18 @@ return function(settings) {
 				return function() {
 					if(methods == null) {
 						var builder = [];
+						var n = 0;
 						for (var name in infoset.members) {
 							var overloads = infoset.members[name];
 
 							for(var i = 0; i < overloads.length; ++i) {
-								builder.push(method_full_template(overloads[i]));
+								var data = overloads[i];
+								var params = $.extend({
+									  link_info : get_method_link_name(data.name, i)
+									, index_in_class : n++
+								}, data);
+
+								builder.push(method_full_template(params));
 							}
 						}
 						methods = $(builder.join(''));
@@ -329,7 +355,27 @@ return function(settings) {
 
 			/** Open the full class view in both planes */
 			this.push_to = function(view_plane_manager) {
-				view_plane_manager.push(get_class_main_page(), get_methods());
+				var class_main_page = get_class_main_page();
+				view_plane_manager.push(class_main_page, get_methods());
+
+				// establish link handlers to resolve methods
+				class_main_page.find('a').each(function() {
+					var $this = $(this);
+					var target = $this.data('link');
+
+					$this.hover(function() {
+						// resolve the link
+						var link = $('div[data-link="'+target+'"]');
+						if(link.length === 0) {
+							// ignore, but maybe log (TODO)
+							return;
+						}
+
+						view_plane_manager.right().scrollTo(link, {
+							scrollInertia : 105
+						});
+					});
+				});
 			};
 		}
 
