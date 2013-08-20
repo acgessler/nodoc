@@ -268,6 +268,24 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function ClassController(infoset) {
 
+			/** Previews a method 
+			 *  @param view_plane_manager UI reference
+			 *  @param target Target method name (TODO) 
+			 *  @param restore */
+			this.preview_method = function(view_plane_manager, target, restore) {
+				// TODO: check if class is visible at all, if so, switch to it
+
+				// resolve the link
+				var link = $('#' + target);
+				if(link.length === 0) {
+					// ignore, but maybe log (TODO)
+					return;
+				}
+				view_plane_manager.right().scrollTo(link, {
+					scrollInertia : 105
+				});
+			}
+
 			this.select_method = function(view_plane_manager, target) {
 				// resolve the link
 				var link = $('#' + target);
@@ -291,25 +309,24 @@ return function(settings) {
 	var view = this.view = (function() {
 
 		// ----------------------------------------------------------------------------------------
-		/** Generates the HTML/DOM for one class info file */
+		/** Generates the HTML/DOM for the methods view of a class (both index and detail view) */
 		// ----------------------------------------------------------------------------------------
-		function ClassRenderer(infoset, controller_inst) {
+		function MethodRenderer(class_renderer, members) {
 
-			controller_inst = controller_inst || new controller.ClassController();
-
-			var get_method_link_name = function(name, index) {
+			var get_method_link_name = this.get_method_link_name = function(name, index) {
 				return 'method_' + name + '_' + index;
 			};
 
-			// Get a string with the method index of the class
-			var get_class_main_page = (function() {
-				var class_main_page = null;
+			// Get the index for the methods of the class
+			this.get_index = this.get_index = (function() {
+				var index = null;
 				return function() {
-					if(class_main_page == null) {
-						// build methods index
+					if(index === null) {
+
+						// build methods index 
 						var builder = [];
-						for (var name in infoset.members) {
-							var overloads = infoset.members[name];
+						for (var name in members) {
+							var overloads = members[name];
 
 							for(var i = 0; i < overloads.length; ++i) {
 								var data = overloads[i];
@@ -317,46 +334,28 @@ return function(settings) {
 									link_info : get_method_link_name(data.name, i)
 								}, data);	
 
-								builder.push((name === infoset.name 
+								builder.push((name === class_renderer.get_name()
 									? ctor_index_entry_template 
 									: method_index_entry_template)(params));
 							}
 						}
-						
-						// put together written doc and methods index
-						var text = class_template(infoset);
-						var index = builder.join('');
-
-						// wrapping it in a div is necessary to be able to use find() on the
-						// returned jQuery selector. Using filter() and stuff should 
-						// theoreticaly also work without the container, but causes weird
-						// scrollbar problems.
-						class_main_page = $('<div>' + text + method_index_template({ index : index }) + '</div>');
-
-						// fix up list formatting
-						class_main_page.find('.index li').addClass("dontsplit");
-						
-						// TODO: does not work
-						//class_main_page.find('.index').columnize({
-						//	columns: 2
-						//});
-				
-						// and prepare for syntax highlighting
-						class_main_page.find('pre').addClass("prettyprint lang-java");
+						index = method_index_template( {
+							index : builder.join('')
+						});
 					}
-					return class_main_page;
-				}
+					return index;
+				};
 			})();
 
-			// Get a jq DOM fragment with the full methods documentation for the class
-			var get_methods = (function() {
+			// Get the full methods documentation for the class
+			var get_detail = this.get_detail = (function() {
 				var methods = null;
 				return function() {
 					if(methods == null) {
 						var builder = [];
 						var n = 0;
-						for (var name in infoset.members) {
-							var overloads = infoset.members[name];
+						for (var name in members) {
+							var overloads = members[name];
 
 							for(var i = 0; i < overloads.length; ++i) {
 								var data = overloads[i];
@@ -374,20 +373,70 @@ return function(settings) {
 					return methods;
 				}
 			})();
+		};
 
-			
-		
+		// ----------------------------------------------------------------------------------------
+		/** Generates the HTML/DOM for one class info file */
+		// ----------------------------------------------------------------------------------------
+		function ClassRenderer(infoset, controller_inst) {
+
+			controller_inst = controller_inst || new controller.ClassController();
+			var self = this;
+
+			/** Get class name without package */
+			var get_name = this.get_name = function() {
+				return infoset.name;
+			};
+
+			/** Get aggregate MethodRenderer for this class */
+			var get_method_renderer = this.get_method_renderer = (function() {
+				var method_renderer = null;
+				return function() {
+					if(method_renderer === null) {
+						method_renderer = new MethodRenderer(self, infoset.members);
+					}
+					return method_renderer;
+				}
+			})();
+
+			/** Get the main description page for the class, including the methods index */
+			var get_class_main_page = this.get_class_main_page = (function() {
+				var class_main_page = null;
+				return function() {
+					if(class_main_page === null) {
+						var method_renderer = get_method_renderer();
+						var text = class_template(infoset);
+						
+						// wrapping it in a div is necessary to be able to use find() on the
+						// returned jQuery selector. Using filter() and stuff should 
+						// theoreticaly also work without the container, but causes weird
+						// scrollbar problems.
+						class_main_page = $('<div>' + text + method_renderer.get_index() + '</div>');
+
+						// fix up list formatting
+						class_main_page.find('.index li').addClass("dontsplit");
+						
+						// TODO: does not work
+						//class_main_page.find('.index').columnize({
+						//	columns: 2
+						//});
+				
+						// and prepare for syntax highlighting
+						class_main_page.find('pre').addClass("prettyprint lang-java");
+					}
+					return class_main_page;
+				}
+			})();
 
 			/** Show a preview of the class - a short brief - on the right view plane */
 			this.preview_to = function(view_plane_manager) {
 				view_plane_manager.set('', get_class_main_page());
 			};
 
-
 			/** Open the full class view in both planes */
 			this.push_to = function(view_plane_manager) {
 				var class_main_page = get_class_main_page();
-				view_plane_manager.push(class_main_page, get_methods());
+				view_plane_manager.push(class_main_page, get_method_renderer().get_detail());
 
 				// establish link handlers to resolve methods
 				class_main_page.find('a').each(function() {
@@ -398,12 +447,27 @@ return function(settings) {
 						controller_inst.select_method(view_plane_manager, target);
 					});
 				});
+
+				class_main_page.find('code').each(function() {
+					var $this = $(this);
+					var target = $this.text();
+					var method_link = get_method_renderer().get_method_link_name(target,0);
+
+					$this.hover(function() {
+						controller_inst.preview_method(view_plane_manager, method_link );
+					});
+				});
 			};
+
+			this.filter_methods = function() {
+
+			}
 		}
 
 
 		return {
-			ClassRenderer : ClassRenderer
+			  ClassRenderer : ClassRenderer
+			, MethodRenderer : MethodRenderer
 		};
 	})();
 
