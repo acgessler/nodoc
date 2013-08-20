@@ -286,6 +286,7 @@ return function(settings) {
 				class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target); 
 			};
 
+
 			var _select_method = function(class_renderer, target) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				// resolve the link
@@ -382,7 +383,13 @@ return function(settings) {
 					var id = $this.attr('id');
 
 					if(_scope_details_to_single_func) {
-						$this.toggle(id === _scope_details_to_single_func);
+						if(id === _scope_details_to_single_func) {
+							$this.hide();
+							$this.fadeIn();
+						}
+						else {
+							$this.hide();
+						}
 					}
 					else {
 						$this.toggle(true);
