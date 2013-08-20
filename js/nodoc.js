@@ -86,7 +86,7 @@ return function(settings) {
 
 	var method_index_entry_template = _.template(
 		'<li id="index_<%= link_info %>"> '+
-			'<a href="<%= link_info %>"> '+
+			'<a data-target="<%= link_info %>"> '+
 				'<%= name %> (<%= parameters %>) '+
 			'</a>'+
 		'</li>');
@@ -128,6 +128,9 @@ return function(settings) {
 		/** Represents a UI plane that can be dynamically filled with content */
 		// ----------------------------------------------------------------------------------------
 		function ViewPlane(str_selector) {
+
+			// TODO: make it so that we can query the DOM node once and cache it -
+			// right now the node may change.
 
 			var successor = null;
 			var page_stack = [];
@@ -208,7 +211,11 @@ return function(settings) {
 				// have to get the ID because scrollTo does not accept arbitrary jQuery selectors
 				var el_id = '#' + $(selector).first().attr('id');
 				$(str_selector).mCustomScrollbar("scrollTo",el_id, settings);
-			}
+			};
+
+			this.update_scrollbars = function() {
+				$(str_selector).mCustomScrollbar("update");
+			};
 		};
 
 
@@ -248,6 +255,11 @@ return function(settings) {
 				_left.pop(settings);
 				_right.pop(settings);
 			};
+
+			this.update_scrollbars = function() {
+				_left.update_scrollbars();
+				_right.update_scrollbars();
+			};
 		};
 
 		return {
@@ -256,8 +268,6 @@ return function(settings) {
 		};
 	})();
 
-
-	var view_planes = new ui.ViewPlaneManager();
 
 
 	// namespace for Controller components - mostly actions for different kinds of UI entities
@@ -272,24 +282,12 @@ return function(settings) {
 			 *  @param view_plane_manager UI reference
 			 *  @param target Target method name (TODO) 
 			 *  @param restore */
-			var _preview_method = function(class_renderer, view_plane_manager, target, restore) {
-				// TODO: check if class is visible at all, if so, switch to it
-
-				// resolve the link
-				var link = $('#' + target);
-				if(link.length === 0) {
-					// ignore, but maybe log (TODO)
-					return;
-				}
-
-				//class_renderer.get_method_renderer().scope_details_to_single_func(link);
-				
-				view_plane_manager.right().scrollTo(link, {
-					scrollInertia : 105
-				}); 
+			var _preview_method = function(class_renderer, target, restore) {
+				class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target); 
 			};
 
-			var _select_method = function(class_view, view_plane_manager, target) {
+			var _select_method = function(class_renderer, target) {
+				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				// resolve the link
 				var link = $('#' + target);
 				if(link.length === 0) {
@@ -305,17 +303,23 @@ return function(settings) {
 
 
 			/** Registers event handler for an explicit method link */
-			this.add_method_link_entry = function($elem, class_renderer, view_plane_manager) {
-				var target = $elem.attr('href');
+			this.add_method_link_entry = function($elem, class_renderer) {
+				var view_plane_manager = class_renderer.get_active_view_planes_manager();
+				var target = $elem.data('target');
 
-				$elem.hover(function() {
-					_preview_method(class_renderer, view_plane_manager, target);
+				$elem.mouseenter(function() {
+					_preview_method(class_renderer, target);
+					return false;
+				});
+
+				$elem.mouseleave(function() {
+					_preview_method(class_renderer, target, true);
 					return false;
 				});
 
 				$elem.click(function(e) {
-					_select_method(class_renderer, view_plane_manager, target);
 					e.preventDefault();
+					_select_method(class_renderer, target);
 					return false;
 				});
 			};
@@ -323,14 +327,20 @@ return function(settings) {
 
 			/** Registers event handler for automatically-generated link to an arbitrary code
 			 *  entity. Such links appear in plain text of both class and method descriptions. */
-			this.add_text_auto_link_entry = function($elem, class_renderer, view_plane_manager) {
+			this.add_text_auto_link_entry = function($elem, class_renderer) {
+				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $elem.text();
 
 				// TODO: extend to handle more than just links to methods in the current class
 				var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
 
-				$elem.hover(function() {
-					_preview_method(class_renderer, view_plane_manager, method_link );
+				$elem.mouseleave(function() {
+					_preview_method(class_renderer, method_link, true );
+					return false;
+				})
+
+				$elem.mouseenter(function() {
+					_preview_method(class_renderer, method_link );
 					return false;
 				})
 			};
@@ -361,6 +371,9 @@ return function(settings) {
 
 			var _update_index = function() {
 				console.log("niy: _update_index");
+
+				var v = class_renderer.get_active_view_planes_manager();
+				v.update_scrollbars();
 			};
 
 			var _update_details = function() {
@@ -375,6 +388,9 @@ return function(settings) {
 						$this.toggle(true);
 					}
 				});
+
+				var v = class_renderer.get_active_view_planes_manager();
+				v.update_scrollbars();
 			};
 
 			/** Get an unique name ("link name") to identify a method based on its name and 
@@ -388,7 +404,7 @@ return function(settings) {
 			 *  function which is given by a link name. */
 			var scope_details_to_single_func = this.scope_details_to_single_func = function(link_name) {
 				if(link_name === undefined) {
-					return _index_includes_parent_methods;
+					return _scope_details_to_single_func;
 				}
 
 				_scope_details_to_single_func = link_name;
@@ -495,6 +511,8 @@ return function(settings) {
 			controller_inst = controller_inst || new controller.ClassController();
 			var self = this;
 
+			var _view_planes_manager = null;
+
 			/** Get class name without package */
 			var get_name = this.get_name = function() {
 				return infoset.name;
@@ -534,7 +552,6 @@ return function(settings) {
 						//class_main_page.find('.index').columnize({
 						//	columns: 2
 						//});
-				
 						// and prepare for syntax highlighting
 						class_main_page.find('pre').addClass("prettyprint lang-java");
 					}
@@ -543,24 +560,33 @@ return function(settings) {
 			})();
 
 			/** Show a preview of the class - a short brief - on the right view plane */
-			this.preview_to = function(view_plane_manager) {
-				view_plane_manager.set('', get_class_main_page());
+			this.preview_to = function(view_planes_manager) {
+				// TODO: remove from previous view planes manager?
+				view_planes_manager.set('', get_class_main_page());
+				_view_planes_manager = view_planes_manager;
 			};
 
 			/** Open the full class view in both planes */
-			this.push_to = function(view_plane_manager) {
+			this.push_to = function(view_planes_manager) {
+				// TODO: remove from previous view planes manager?
 				var class_main_page = get_class_main_page();
-				view_plane_manager.push(class_main_page, get_method_renderer().get_detail());
+				view_planes_manager.push(class_main_page, get_method_renderer().get_detail());
+
+				_view_planes_manager = view_planes_manager;
 
 				// establish link handlers to resolve methods
 				class_main_page.find('a').each(function() {
-					controller_inst.add_method_link_entry($(this), self, view_plane_manager);
+					controller_inst.add_method_link_entry($(this), self);
 				});
 
 				
 				class_main_page.find('code').each(function() {
-					controller_inst.add_text_auto_link_entry($(this), self, view_plane_manager);
+					controller_inst.add_text_auto_link_entry($(this), self);
 				});
+			};
+
+			this.get_active_view_planes_manager = function() {
+				return _view_planes_manager;
 			};
 		}
 
@@ -571,7 +597,9 @@ return function(settings) {
 		};
 	})();
 
-	
+
+
+	var view_planes = new ui.ViewPlaneManager();
 
 	var get_loading_html = function() {
 		return loading_template({text:'Loading Preview'});

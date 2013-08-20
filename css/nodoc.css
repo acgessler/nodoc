@@ -141,3 +141,6 @@ li.search_entry_java_class span.class_package {
   line-height: 1.3;
   font-size: 1.1em;
 }
+.index a {
+  cursor: pointer;
+}
