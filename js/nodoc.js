@@ -317,62 +317,65 @@ return function(settings) {
 				return 'method_' + name + '_' + index;
 			};
 
+			var index = null;
+			var methods = null;
+
 			// Get the index for the methods of the class
-			this.get_index = this.get_index = (function() {
-				var index = null;
-				return function() {
-					if(index === null) {
+			this.get_index = this.get_index = function() {
+				if(index === null) {
 
-						// build methods index 
-						var builder = [];
-						for (var name in members) {
-							var overloads = members[name];
+					// build methods index 
+					var builder = [];
+					for (var name in members) {
+						var overloads = members[name];
 
-							for(var i = 0; i < overloads.length; ++i) {
-								var data = overloads[i];
-								var params = $.extend({
-									link_info : get_method_link_name(data.name, i)
-								}, data);	
+						for(var i = 0; i < overloads.length; ++i) {
+							var data = overloads[i];
+							var params = $.extend({
+								link_info : get_method_link_name(data.name, i)
+							}, data);	
 
-								builder.push((name === class_renderer.get_name()
-									? ctor_index_entry_template 
-									: method_index_entry_template)(params));
-							}
+							builder.push((name === class_renderer.get_name()
+								? ctor_index_entry_template 
+								: method_index_entry_template)(params));
 						}
-						index = method_index_template( {
-							index : builder.join('')
-						});
 					}
-					return index;
-				};
-			})();
+					index = method_index_template( {
+						index : builder.join('')
+					});
+
+					// wrap in a <div>
+					index = $('<div>' + index + '</div>');
+				}
+				return index;
+			};
 
 			// Get the full methods documentation for the class
-			var get_detail = this.get_detail = (function() {
-				var methods = null;
-				return function() {
-					if(methods == null) {
-						var builder = [];
-						var n = 0;
-						for (var name in members) {
-							var overloads = members[name];
+			var get_detail = this.get_detail = function() {
+				if(methods == null) {
+					var builder = [];
+					var n = 0;
+					for (var name in members) {
+						var overloads = members[name];
 
-							for(var i = 0; i < overloads.length; ++i) {
-								var data = overloads[i];
-								var params = $.extend({
-									  link_info : get_method_link_name(data.name, i)
-									, index_in_class : n++
-								}, data);
+						for(var i = 0; i < overloads.length; ++i) {
+							var data = overloads[i];
+							var params = $.extend({
+								  link_info : get_method_link_name(data.name, i)
+								, index_in_class : n++
+							}, data);
 
-								builder.push(method_full_template(params));
-							}
+							builder.push(method_full_template(params));
 						}
-						methods = $(builder.join(''));
 					}
+					methods = builder.join('');
 
-					return methods;
+					// wrap in a <div>
+					methods = $('<div>' + methods + '</div>');
 				}
-			})();
+
+				return methods;
+			};
 		};
 
 		// ----------------------------------------------------------------------------------------
@@ -411,7 +414,9 @@ return function(settings) {
 						// returned jQuery selector. Using filter() and stuff should 
 						// theoreticaly also work without the container, but causes weird
 						// scrollbar problems.
-						class_main_page = $('<div>' + text + method_renderer.get_index() + '</div>');
+						class_main_page = $('<div>')
+							.append(text)
+							.append(method_renderer.get_index());
 
 						// fix up list formatting
 						class_main_page.find('.index li').addClass("dontsplit");
