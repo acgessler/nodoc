@@ -85,7 +85,7 @@ return function(settings) {
 		'<%= long_desc %>');
 
 	var method_index_entry_template = _.template(
-		'<li> '+
+		'<li id="index_<%= link_info %>"> '+
 			'<a href="<%= link_info %>"> '+
 				'<%= name %> (<%= parameters %>) '+
 			'</a>'+
@@ -272,7 +272,7 @@ return function(settings) {
 			 *  @param view_plane_manager UI reference
 			 *  @param target Target method name (TODO) 
 			 *  @param restore */
-			this.preview_method = function(view_plane_manager, target, restore) {
+			var _preview_method = function(class_renderer, view_plane_manager, target, restore) {
 				// TODO: check if class is visible at all, if so, switch to it
 
 				// resolve the link
@@ -281,22 +281,59 @@ return function(settings) {
 					// ignore, but maybe log (TODO)
 					return;
 				}
+
+				//class_renderer.get_method_renderer().scope_details_to_single_func(link);
+				
 				view_plane_manager.right().scrollTo(link, {
 					scrollInertia : 105
-				});
-			}
+				}); 
+			};
 
-			this.select_method = function(view_plane_manager, target) {
+			var _select_method = function(class_view, view_plane_manager, target) {
 				// resolve the link
 				var link = $('#' + target);
 				if(link.length === 0) {
 					// ignore, but maybe log (TODO)
 					return;
 				}
+
+				class_renderer.get_method_renderer().scope_details_to_single_func(null);
 				view_plane_manager.right().scrollTo(link, {
 					scrollInertia : 105
 				});
-			}
+			};
+
+
+			/** Registers event handler for an explicit method link */
+			this.add_method_link_entry = function($elem, class_renderer, view_plane_manager) {
+				var target = $elem.attr('href');
+
+				$elem.hover(function() {
+					_preview_method(class_renderer, view_plane_manager, target);
+					return false;
+				});
+
+				$elem.click(function(e) {
+					_select_method(class_renderer, view_plane_manager, target);
+					e.preventDefault();
+					return false;
+				});
+			};
+
+
+			/** Registers event handler for automatically-generated link to an arbitrary code
+			 *  entity. Such links appear in plain text of both class and method descriptions. */
+			this.add_text_auto_link_entry = function($elem, class_renderer, view_plane_manager) {
+				var target = $elem.text();
+
+				// TODO: extend to handle more than just links to methods in the current class
+				var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
+
+				$elem.hover(function() {
+					_preview_method(class_renderer, view_plane_manager, method_link );
+					return false;
+				})
+			};
 		};
 
 		return {
@@ -313,15 +350,87 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function MethodRenderer(class_renderer, members) {
 
+			var index = null;
+			var methods = null;
+
+			var _index_includes_parent_methods = false;
+			var _minimum_protection_level = 'private';
+
+			var _scope_details_to_single_func = null;
+
+
+			var _update_index = function() {
+				console.log("niy: _update_index");
+			};
+
+			var _update_details = function() {
+				methods.find('div.method').each(function() {
+					var $this = $(this);
+					var id = $this.attr('id');
+
+					if(_scope_details_to_single_func) {
+						$this.toggle(id === _scope_details_to_single_func);
+					}
+					else {
+						$this.toggle(true);
+					}
+				});
+			};
+
+			/** Get an unique name ("link name") to identify a method based on its name and 
+			 *  its index in the list of overloads sharing this name. */
 			var get_method_link_name = this.get_method_link_name = function(name, index) {
 				return 'method_' + name + '_' + index;
 			};
 
-			var index = null;
-			var methods = null;
 
-			// Get the index for the methods of the class
-			this.get_index = this.get_index = function() {
+			/** Property that determines whether the details view is scoped to a single 
+			 *  function which is given by a link name. */
+			var scope_details_to_single_func = this.scope_details_to_single_func = function(link_name) {
+				if(link_name === undefined) {
+					return _index_includes_parent_methods;
+				}
+
+				_scope_details_to_single_func = link_name;
+				_update_details();
+			};
+
+
+			/** Property that determines whether parent methods are included in the index  */
+			var index_includes_parent_methods = this.index_includes_parent_methods = function(doit) {
+				if(doit === undefined) {
+					return _index_includes_parent_methods;
+				}
+
+				// TODO!
+				console.log("niy: include_parent_methods");
+
+				_index_includes_parent_methods = doit;
+				_update_index();
+			};
+
+
+			/** Property that determines up to which access level methods are included
+			 *  in both index and methods view.
+			 *  Possible values: "public", "protected", "", "private"  */
+			var minimum_protection_level = this.minimum_protection_level = function(level) {
+				if(doit === undefined) {
+					return _minimum_protection_level;
+				}
+
+				// TODO!
+				console.log("niy: minimum_protection_level");
+
+				if(minimum_protection_level !== level) {
+					minimum_protection_level = level;
+					_update_index();
+					_update_detail();
+				}
+			};
+
+
+			/** Get the index for the methods of the class */
+			var get_index = this.get_index = function() {
 				if(index === null) {
 
 					// build methods index 
@@ -350,7 +459,7 @@ return function(settings) {
 				return index;
 			};
 
-			// Get the full methods documentation for the class
+			/** Get the full methods documentation for the class */
 			var get_detail = this.get_detail = function() {
 				if(methods == null) {
 					var builder = [];
@@ -445,28 +554,14 @@ return function(settings) {
 
 				// establish link handlers to resolve methods
 				class_main_page.find('a').each(function() {
-					var $this = $(this);
-					var target = $this.attr('href');
-
-					$this.hover(function() {
-						controller_inst.select_method(view_plane_manager, target);
-					});
+					controller_inst.add_method_link_entry($(this), self, view_plane_manager);
 				});
 
+				
 				class_main_page.find('code').each(function() {
-					var $this = $(this);
-					var target = $this.text();
-					var method_link = get_method_renderer().get_method_link_name(target,0);
-
-					$this.hover(function() {
-						controller_inst.preview_method(view_plane_manager, method_link );
-					});
+					controller_inst.add_text_auto_link_entry($(this), self, view_plane_manager);
 				});
 			};
-
-			this.filter_methods = function() {
-
-			}
 		}
 
 
