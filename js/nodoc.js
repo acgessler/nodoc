@@ -348,9 +348,15 @@ return function(settings) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $elem.text();
 
-				// ## first check if this link can be resolved to a method in the current class
+				// ## check if this a link to the current class - ignore it then.
+				if(target === infoset.name) {
+					return;
+				}
+
+				// ## check if this link can be resolved to a method in the current class
 				var on_leave = null;
 				var on_enter = null;
+				var on_click = null;
 				if(target in infoset.members) {
 					var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
 					on_leave = function() {
@@ -362,6 +368,10 @@ return function(settings) {
 						// give it a small delay until we show the preview
 						_preview_method(class_renderer, method_link, undefined, 100 );
 					};
+
+					on_click = function() {
+						_select_method(class_renderer, method_link, undefined, 100 );
+					};
 				}
 				// ## else see if the symbol can be resolved in a parent class
 				// TODO
@@ -370,8 +380,8 @@ return function(settings) {
 					return;
 				}
 
+				// add link-like styling
 				$elem.addClass('autolink');
-
 				
 				$elem.mouseleave(function() {
 					on_leave();
@@ -379,9 +389,18 @@ return function(settings) {
 				});
 
 				$elem.mouseenter(function() {
-					on_enter;
+					on_enter();
 					return false;
 				});
+
+				// not every auto-link need to be clickable
+				if(on_click) {
+					$elem.click(function(e) {
+						e.preventDefault();
+						on_click();
+						return false;
+					});
+				}
 			};
 		};
 
