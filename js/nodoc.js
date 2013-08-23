@@ -628,6 +628,14 @@ return function(settings) {
 				class_main_page.find('code').each(function() {
 					controller_inst.add_text_auto_link_entry($(this), self);
 				});
+
+				// also auto-link types in code snippets already highlighted
+				// by prettyprinter. TODO: get a callback
+				setTimeout(function() {
+					class_main_page.find('span.typ').each(function() {
+						controller_inst.add_text_auto_link_entry($(this), self);
+					})
+				}, 1000);
 			};
 
 			this.get_active_view_planes_manager = function() {
