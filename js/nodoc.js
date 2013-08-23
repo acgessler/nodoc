@@ -269,6 +269,94 @@ return function(settings) {
 	})();
 
 
+	// namespace for Model components - mostly thin wrappers around the json infosets 
+	// derived from the original javadoc
+	var model = this.model = (function() {
+
+
+		// ----------------------------------------------------------------------------------------
+		/**  Abstract index implementation that is able to deal with both package-level and
+		 *   class-level index */
+		// ----------------------------------------------------------------------------------------
+		function ContainerModel(infoset, parent) {
+
+			this.get_type = function() {
+				return infoset.type;
+			};
+
+
+			this.get_name = function() {
+				return infoset.name;
+			};
+
+
+			this.get_parent = function() {
+				return parent;
+			};
+
+
+			/** Return a dictionary of members, each of which is an Array to
+			 *  accomodate for overloaded names. The array elements are objects
+			 *  which either expose a `ref` property indicating a sub-container,
+			 *  or they are aggregate members with members depending on the
+			 *  type of the container (i.e. methods). 
+			 *
+			 *  To handle sub containers, use `get_sub_container()`.
+			 **/
+			this.get_members = function() {
+				return infoset.members;
+			};
+
+
+			this.get_short_desc = function() {
+				return infoset.short_desc;
+			};
+
+
+			this.get_long_desc = function() {
+				return infoset.desc;
+			};
+
+
+			/** Get a sub-container with a specific name. Returns false if the
+			 *  member does not exist, or is not a container. The callback 
+			 *  receives a ContainerModel-derived class or a null if the data
+			 *  for the container could not be obtained.  */
+			this.get_sub_container = function(name, callback) {
+				var cont = infoset.members[name];
+				if(!cont.ref) {
+					return false;
+				}
+
+				return fetch_infoset(cont.ref, function(infoset) {
+					callback(make_container(infoset));
+				});
+
+				return true;
+			};
+		};
+
+		// ----------------------------------------------------------------------------------------
+		/**  */
+		// ----------------------------------------------------------------------------------------
+		function PackageModel(infoset) {
+			ContainerModel.apply(this);
+		};
+
+		PackageModel.prototype = new ContainerModel();
+
+		// ----------------------------------------------------------------------------------------
+		/**  */
+		// ----------------------------------------------------------------------------------------
+		function ClassModel(infoset) {
+
+		};
+
+		return {
+			ContainerModel : ContainerModel,
+			ClassModel : ClassModel
+		};
+	}());
 
 	// namespace for Controller components - mostly actions for different kinds of UI entities
 	var controller = this.controller = (function() {
