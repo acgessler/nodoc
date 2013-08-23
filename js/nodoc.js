@@ -348,19 +348,38 @@ return function(settings) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $elem.text();
 
-				// TODO: extend to handle more than just links to methods in the current class
-				var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
+				// ## first check if this link can be resolved to a method in the current class
+				var on_leave = null;
+				var on_enter = null;
+				if(target in infoset.members) {
+					var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
+					on_leave = function() {
+						// give it a small delay until we undo the preview
+						_preview_method(class_renderer, method_link, true, 200 );
+					};
 
+					on_enter = function() {
+						// give it a small delay until we show the preview
+						_preview_method(class_renderer, method_link, undefined, 100 );
+					};
+				}
+				// ## else see if the symbol can be resolved in a parent class
+				// TODO
+
+				if(!on_enter || !on_leave) {
+					return;
+				}
+
+				
 				$elem.mouseleave(function() {
-					// give it a small delay until we undo the preview
-					_preview_method(class_renderer, method_link, true, 200 );
+					on_leave();
 					return false;
-				})
+				});
 
 				$elem.mouseenter(function() {
-					_preview_method(class_renderer, method_link, undefined, 100 );
+					on_enter;
 					return false;
-				})
+				});
 			};
 		};
 
@@ -532,7 +551,7 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function ClassRenderer(infoset, controller_inst) {
 
-			controller_inst = controller_inst || new controller.ClassController();
+			controller_inst = controller_inst || new controller.ClassController(infoset);
 			var self = this;
 
 			var _view_planes_manager = null;
