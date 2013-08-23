@@ -278,12 +278,27 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function ClassController(infoset) {
 
+			var last_timeout_id = null;
+
 			/** Previews a method 
 			 *  @param view_plane_manager UI reference
 			 *  @param target Target method name (TODO) 
 			 *  @param restore */
-			var _preview_method = function(class_renderer, target, restore) {
-				class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target); 
+			var _preview_method = function(class_renderer, target, restore, delay) {
+				var doit = function() {
+					last_timeout_id = null;
+					class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target);
+				};
+				if(last_timeout_id !== null) {
+					clearTimeout(last_timeout_id);
+					last_timeout_id = null;
+				}
+				if(delay) {
+					last_timeout_id = setTimeout(doit, delay);
+				}
+				else {
+					doit(); 
+				}
 			};
 
 
@@ -314,13 +329,14 @@ return function(settings) {
 				});
 
 				$elem.mouseleave(function() {
-					_preview_method(class_renderer, target, true);
+					// give it a small delay until we undo the preview
+					_preview_method(class_renderer, target, true, 200 );
 					return false;
 				});
 
 				$elem.click(function(e) {
 					e.preventDefault();
-					_select_method(class_renderer, target);
+					_select_method(class_renderer, target, undefined, 100 );
 					return false;
 				});
 			};
@@ -336,12 +352,13 @@ return function(settings) {
 				var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
 
 				$elem.mouseleave(function() {
-					_preview_method(class_renderer, method_link, true );
+					// give it a small delay until we undo the preview
+					_preview_method(class_renderer, method_link, true, 200 );
 					return false;
 				})
 
 				$elem.mouseenter(function() {
-					_preview_method(class_renderer, method_link );
+					_preview_method(class_renderer, method_link, undefined, 100 );
 					return false;
 				})
 			};
