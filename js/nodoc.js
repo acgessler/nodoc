@@ -370,6 +370,8 @@ return function(settings) {
 					return;
 				}
 
+				$elem.addClass('autolink');
+
 				
 				$elem.mouseleave(function() {
 					on_leave();

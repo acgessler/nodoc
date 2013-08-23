@@ -8,6 +8,11 @@ tt, code {
   font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
 }
 
+.autolink {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 #logo {
   background-image: url(../img/logo.png);
   width: 64px;

@@ -20,6 +20,11 @@ tt, code {
 	font-family: #{$monospace_fonts};
 }
 
+.autolink {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
 #logo {
  	background-image:url(#{$image_path}/logo.png);
  	width: 64px;
