@@ -441,10 +441,50 @@ return function(settings) {
 					return;
 				}
 
-				// ## check if this link can be resolved to a method in the current class
+				
 				var on_leave = null;
 				var on_enter = null;
 				var on_click = null;
+
+				var setup_autolink = function() {
+					if(!on_enter || !on_leave) {
+						return;
+					}
+
+					// add link-like styling
+					$elem.addClass('autolink');
+					
+					// swallow the mouseleave() after a click()
+					var closed = false;
+
+					$elem.mouseleave(function() {
+						if(closed) {
+							return false;
+						}
+						on_leave();
+						return false;
+					});
+
+					$elem.mouseenter(function() {
+						if(closed) {
+							return false;
+						}
+						on_enter();
+						return false;
+					});
+
+					// not every auto-link need to be clickable
+					if(on_click) {
+						$elem.click(function(e) {
+							closed = true;
+							e.preventDefault();
+							on_click();
+							return false;
+						});
+					}
+				};
+
+				// ## check if this link can be resolved to a method in the current class
 				if(target in infoset.members) {
 					var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
 					on_leave = function() {
@@ -462,33 +502,35 @@ return function(settings) {
 					};
 				}
 				// ## else see if the symbol can be resolved in a parent class
-				// TODO
 
-				if(!on_enter || !on_leave) {
-					return;
-				}
+				// TODO - temporary HACK to get package siblings, assumes index is loaded
+				// and callback is called immediately.
+				fetch_infoset('output/index.json', function(index) {
+					if (target in index) {
+						fetch_infoset('output/class_' + target + '.json', function(infoset) {
+							if (!infoset) {
+								return;
+							}
+							var renderer = new view.ClassRenderer(infoset);
 
-				// add link-like styling
-				$elem.addClass('autolink');
-				
-				$elem.mouseleave(function() {
-					on_leave();
-					return false;
+							on_enter = function() {
+								renderer.preview_to(class_renderer.get_active_view_planes_manager(), true);
+							};
+
+							on_leave = function() {
+
+							};
+
+							on_click = function() {
+								renderer.push_to(class_renderer.get_active_view_planes_manager());
+							};
+
+							setup_autolink();
+						});
+					}
 				});
 
-				$elem.mouseenter(function() {
-					on_enter();
-					return false;
-				});
-
-				// not every auto-link need to be clickable
-				if(on_click) {
-					$elem.click(function(e) {
-						e.preventDefault();
-						on_click();
-						return false;
-					});
-				}
+				setup_autolink();
 			};
 		};
 
@@ -712,9 +754,9 @@ return function(settings) {
 			})();
 
 			/** Show a preview of the class - a short brief - on the right view plane */
-			this.preview_to = function(view_planes_manager) {
+			this.preview_to = function(view_planes_manager, keep_left_side) {
 				// TODO: remove from previous view planes manager?
-				view_planes_manager.set('', get_class_main_page());
+				view_planes_manager.set(keep_left_side ? null : '', get_class_main_page());
 				_view_planes_manager = view_planes_manager;
 			};
 
