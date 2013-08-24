@@ -2,6 +2,11 @@ body {
   background-image: url(../img/background.png);
   background-repeat: repeat-x;
   background-position: top;
+  padding: 0px;
+  margin: 0px;
+  color: #444444;
+  font-size: 13px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, freesans, sans-serif;
 }
 
 tt, code {
@@ -83,7 +88,8 @@ li.search_entry_java_class span.class_package {
 }
 
 .left, .right {
-  padding: 0px;
+  padding: 3%;
+  padding-top: 5%;
   margin: 0px;
   margin-top: 15px;
   overflow: auto;
@@ -91,14 +97,15 @@ li.search_entry_java_class span.class_package {
 }
 
 .left {
-  width: 48%;
+  width: 44%;
   max-width: 50%;
   float: left;
   padding-right: 2%;
 }
 
 .right {
-  width: 50%;
+  padding-right: 0px;
+  width: 47%;
   max-width: 60%;
   float: left;
 }

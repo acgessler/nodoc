@@ -164,7 +164,7 @@ return function(settings) {
 					var successor_copy = successor;
 					if (!successor_copy.no_scrollbars) {
 						$elem.mCustomScrollbar({
-						  	theme: "dark-thick"
+						  	theme: "light2"
 						  	, mouseWheelPixels: 600 
 							, scrollButtons: {
       							  enable: true
