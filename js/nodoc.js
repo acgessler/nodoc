@@ -436,6 +436,16 @@ return function(settings) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $elem.text();
 
+				// handle cases in which links to methods are made by giving
+				// parentheses and possibly even parameter or parameter types.
+				// We don't resolve overloads, though.
+				if (target[target.length - 1] === ')') {
+					var index = target.indexOf('(');
+					if(index !== -1) {
+						target = target.slice(0, index);
+					}
+				}
+
 				// ## check if this a link to the current class - ignore it then.
 				if(target === infoset.name) {
 					return;
@@ -589,7 +599,7 @@ return function(settings) {
 
 			/** Get an unique name ("link name") to identify a method based on its name and 
 			 *  its index in the list of overloads sharing this name. */
-			var get_method_link_name = this.get_method_link_name = function(name, index) {
+			var get_method_link_name = this.get_method_link_name = function(name, index) {			
 				return 'method_' + name + '_' + index;
 			};
 
