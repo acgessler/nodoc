@@ -9,6 +9,10 @@ body {
   font-family: 'Helvetica Neue', Helvetica, Arial, freesans, sans-serif;
 }
 
+table {
+  font-size: 13px;
+}
+
 tt, code {
   font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
 }
@@ -122,8 +126,9 @@ li.search_entry_java_class span.class_package {
   float: left;
   visibility: visible;
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 5px;
+  height: 35px;
+  z-index: 1000;
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -134,7 +139,28 @@ li.search_entry_java_class span.class_package {
   background-image: url(../img/protected.png);
 }
 .method_info.final {
+  width: 35px;
+  height: 35px;
   background-image: url(../img/final.png);
+}
+
+.method_name {
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+}
+
+.method_param_list, .method_return_type, .method_spec {
+  font-size: 14px;
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+  color: #666688;
+}
+
+.param_doc_type {
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+  color: #666688;
+}
+
+.param_doc_name {
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
 }
 
 .index {

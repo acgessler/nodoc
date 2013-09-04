@@ -64,16 +64,24 @@ return function(settings) {
 			'<div class="method_info <%= access_spec %>"> </div> ' +
 			'<div class="method_info <%= extra_spec %>"> </div> ' +
 			'<h3> '+
-				'<font size="-1"> ' +
-					'<%= access_spec %> ' +
-					'<%= extra_spec %>  ' +
-					'<%= return_type %> ' +
-				'</font> ' +
-				'<%= name %>  ' +
-				'(<%= parameters %>) '+
+				
+		//		'<%= access_spec %> ' +
+				'<span class="method_spec"> <%= extra_spec %>  </span>' +
+				'<span class="method_return_type"> <%= return_type %> </span>' +
+		
+				'<span class="method_name"> <%= name %> </span>' +
+				'<span class="method_param_list"> (<%= param_list %>) </span>'+
 			'</h3>  ' +
-			'<%= comment %> <hr> '+
+			'<table> <%= param_doc %> </table> <%= comment %> <hr> '+
 		'</div>');
+
+	var method_param_template = _.template(
+		'<tr> <span class="param_doc"> ' + 
+			' <td> <span class="param_doc_type autolink"> <%= type %> </span> </td>'+
+			' <td> <span class="param_doc_name"> <%= name %> </span> </td>'+
+			' <td> <span class="param_doc_text"> <%= doc %>  </span> </td>'+
+		'</span> <tr/>'
+	);
 
 	var class_template = _.template(
 		'<h1> ' +
@@ -660,9 +668,18 @@ return function(settings) {
 
 						for(var i = 0; i < overloads.length; ++i) {
 							var data = overloads[i];
+
+							var param_list_entries = [];
+							for(var j = 0; j < data.parameters.length; ++j) {
+								var p = data.parameters[j];
+								param_list_entries.push(p[0] + ' ' + p[1]);
+							}
+
 							var params = $.extend({
-								link_info : get_method_link_name(data.name, i)
+								  link_info : get_method_link_name(data.name, i)
 							}, data);	
+
+							params.parameters = param_list_entries.join(', ');
 
 							builder.push((name === class_renderer.get_name()
 								? ctor_index_entry_template 
@@ -689,9 +706,25 @@ return function(settings) {
 
 						for(var i = 0; i < overloads.length; ++i) {
 							var data = overloads[i];
+							
+							var param_dox_entries = [];
+							//var param_list_entries = [];
+							for(var j = 0; j < data.parameters.length; ++j) {
+								var p = data.parameters[j];
+								//param_list_entries.push(p[0] + ' ' + p[1]);
+								param_dox_entries.push(method_param_template({
+									  type : p[0]
+									, name : p[1]
+									, doc  : p[2]
+								}));
+							}
+
+							var param_string = data.parameters.length == 0 ? '' : data.parameters.length;
 							var params = $.extend({
 								  link_info : get_method_link_name(data.name, i)
 								, index_in_class : n++
+								, param_doc : param_dox_entries.join('')
+								, param_list : param_string
 							}, data);
 
 							builder.push(method_full_template(params));
@@ -928,5 +961,5 @@ return function(settings) {
 
 function run() {
 	var doc = new DocumentationViewer();
-	doc.open_class('output/class_Window.json');
+	doc.open_class('output/class_GraphicsConfiguration.json');
 }

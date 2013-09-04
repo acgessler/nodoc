@@ -11,7 +11,6 @@ $monospace_fonts : "Consolas,Monaco,
 			monospace";
 
 
-
 body {
 	background-image:url(#{$image_path}/background.png);
 	background-repeat: repeat-x;
@@ -23,6 +22,10 @@ body {
 
 	font-size: 13px;
 	font-family: 'Helvetica Neue', Helvetica, Arial, freesans, sans-serif;
+}
+
+table {
+	font-size: 13px;
 }
 
 tt, code {
@@ -166,8 +169,10 @@ li.search_entry_java_class {
 		visibility: visible;
 		position: relative;
 		
-		width: 40px;
-		height: 40px;
+		width: 5px;
+		height: 35px;
+
+		z-index: 1000;
 
 		background-repeat:no-repeat;
 		background-position:center; 
@@ -182,8 +187,39 @@ li.search_entry_java_class {
 	}
 
 	&.final {
+		width: 35px;
+		height: 35px;
+
 		background-image: url(#{$image_path}/final.png);
 	}
+}
+
+.method_name {
+	font-family: #{$monospace_fonts};
+}
+
+.method_param_list, .method_return_type, .method_spec {
+	font-size: 14px;
+	font-family: #{$monospace_fonts};
+	color: #666688;
+}
+
+
+.param_doc {
+	
+}
+
+.param_doc_type {
+	font-family: #{$monospace_fonts};
+	color: #666688;
+}
+
+.param_doc_name {
+	font-family: #{$monospace_fonts};
+}
+
+.param_doc_text {
+
 }
 
 .index {
