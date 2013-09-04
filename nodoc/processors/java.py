@@ -84,7 +84,10 @@ class JavaHTMLFormatter(object):
 		"""
 		params_out = {}
 		for match in re.findall(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL):
-			params_out[match[0]] = JavaHTMLFormatter.javadoc_block_to_html(match[1])
+			html = JavaHTMLFormatter.javadoc_block_to_html(match[1])
+			# strip the outer <p> </p> block that markdown inevitably generates
+			html = re.sub(r'^\s*<p>(.*)<\/p>\s*$',r'\1', html);
+			params_out[match[0]] = html
 
 		return params_out
 
