@@ -67,7 +67,7 @@ return function(settings) {
 				
 		//		'<%= access_spec %> ' +
 				'<span class="method_spec"> <%= extra_spec %>  </span>' +
-				'<span class="method_return_type"> <%= return_type %> </span>' +
+				'<span class="method_return_type try_auto_link"> <%= return_type %> </span>' +
 		
 				'<span class="method_name"> <%= name %> </span>' +
 				'<span class="method_param_list"> (<%= param_list %>) </span>'+
@@ -77,7 +77,7 @@ return function(settings) {
 
 	var method_param_template = _.template(
 		'<tr> <span class="param_doc"> ' + 
-			' <td> <span class="param_doc_type autolink"> <%= type %> </span> </td>'+
+			' <td> <span class="param_doc_type try_auto_link"> <%= type %> </span> </td>'+
 			' <td> <span class="param_doc_name"> <%= name %> </span> </td>'+
 			' <td> <span class="param_doc_text"> <%= doc %>  </span> </td>'+
 		'</span> <tr/>'
@@ -442,7 +442,7 @@ return function(settings) {
 			 *  entity. Such links appear in plain text of both class and method descriptions. */
 			this.add_text_auto_link_entry = function($elem, class_renderer) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
-				var target = $elem.text();
+				var target = $.trim($elem.text());
 
 				// handle cases in which links to methods are made by giving
 				// parentheses and possibly even parameter or parameter types.
@@ -459,7 +459,6 @@ return function(settings) {
 					return;
 				}
 
-				
 				var on_leave = null;
 				var on_enter = null;
 				var on_click = null;
@@ -807,27 +806,39 @@ return function(settings) {
 			this.push_to = function(view_planes_manager) {
 				// TODO: remove from previous view planes manager?
 				var class_main_page = get_class_main_page();
-				view_planes_manager.push(class_main_page, get_method_renderer().get_detail());
+				var detail_page = get_method_renderer().get_detail();
 
+				view_planes_manager.push(class_main_page, detail_page);
 				_view_planes_manager = view_planes_manager;
 
-				// establish link handlers to resolve methods
-				class_main_page.find('a').each(function() {
-					controller_inst.add_method_link_entry($(this), self);
-				});
+				// when publishing the rendered class, add event handlers using the
+				// Class Controller.
 
-				
-				class_main_page.find('code').each(function() {
-					controller_inst.add_text_auto_link_entry($(this), self);
-				});
-
-				// also auto-link types in code snippets already highlighted
-				// by prettyprinter. TODO: get a callback
-				setTimeout(function() {
-					class_main_page.find('span.typ').each(function() {
+				var add_links = function(page) {
+					// establish link handlers to resolve methods
+					page.find('a').each(function() {
+						controller_inst.add_method_link_entry($(this), self);
+					});
+					
+					page.find('code').each(function() {
 						controller_inst.add_text_auto_link_entry($(this), self);
-					})
-				}, 1000);
+					});
+
+					page.find('.try_auto_link').each(function() {
+						controller_inst.add_text_auto_link_entry($(this), self);
+					});
+
+					// also auto-link types in code snippets already highlighted
+					// by prettyprinter. TODO: get a callback
+					setTimeout(function() {
+						page.find('span.typ').each(function() {
+							controller_inst.add_text_auto_link_entry($(this), self);
+						})
+					}, 1000);
+				};
+
+				add_links(class_main_page);
+				add_links(detail_page);
 			};
 
 			this.get_active_view_planes_manager = function() {
