@@ -57,11 +57,11 @@ for k in list(rex.keys()):
 	rex[k] = re.compile(rex[k], re.DOTALL | re.VERBOSE)
 
 
-class JavaHTMLFormatter:
+class JavaHTMLFormatter(object):
 	"""Static utilities for formatting JavaDoc snippets to HTML"""
 
 	@staticmethod
-	def javadoc_block_to_html(block, symbol_resolver = None, run_markdown = True):
+	def javadoc_block_to_html(block, run_markdown = True):
 		"""
 		Given a javadoc annotated text block, generate appropriate HTML
 		"""
@@ -70,29 +70,38 @@ class JavaHTMLFormatter:
 		block = '\n'.join(lines)
 
 		block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
-		if symbol_resolver:
-			block = re.sub(r'\b(' + '|'.join(symbol_resolver)+r')\b',r'<tt>[\1](www.example.com)</tt>', block)
 		block = re.sub(r'\{\s*@code\s+(.*?)\s*\}',r'<tt>\1</tt>', block) # todo: regex cannot handle this
 		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1</tt>', block) 
 		return markdown.markdown(block) if run_markdown else block
 
 
 	@staticmethod
-	def javadoc_method_doc_to_html(block, symbol_resolver = None, run_markdown = True):
+	def javadoc_method_extract_param_doc(block):
 		"""
-		Given a javadoc annotated method commentary, generate appropriate HTML
+		Extracts parameter documentation from a JavaDoc method doc.
+
+		Produces a dictinary mapping parameter names to dox.
+		"""
+		params_out = {}
+		for match in re.findall(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL):
+			params_out[match[0]] = JavaHTMLFormatter.javadoc_block_to_html(match[1])
+
+		return params_out
+
+
+	@staticmethod
+	def javadoc_method_doc_to_html(block, run_markdown = True):
+		"""
+		Given a javadoc annotated method commentary, generate appropriate HTML,
+		dropping the commentary for parameters.
 		"""
 
-		block = JavaHTMLFormatter.javadoc_block_to_html(block, symbol_resolver, False)
-
-		# extract all parameters and re-order them so they appear at the beginning
-		params = {}
-		def collect_param(match): 
-			params[match.group(1)] = match.group(2)
+		block = JavaHTMLFormatter.javadoc_block_to_html(block, run_markdown = False)
+		def erase_param(match): 
 			return ''
 
 		block = re.sub(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',
-			collect_param, block, 0, re.DOTALL)
+			erase_param, block, 0, re.DOTALL)
 
 		block = re.sub(r'@(?:throws?|exception)(.*?)(?=@|\n\s*\n|$)',
 			r'<br><font color="darkred"> &dagger; </font> \1', block,
@@ -103,17 +112,15 @@ class JavaHTMLFormatter:
 			0, re.DOTALL)
 
 		block = re.sub(r'@note(.*?)',r'<br> __Note__: \1', block)
-
-		param_text = ""
-		for name, comment in params.items():
-			param_text = param_text + '<br><b><font color="darkblue">'+name+'</font> &diams; </b>' + comment
-
-		block = (param_text + '<br><br>' if param_text else '') + block
 		return markdown.markdown(block) if run_markdown else block
 
 
+class ParseError(Exception):
+	def __init__(self, str):
+		Exception.__init__(self, str)
 
-class JavaMethod:
+
+class JavaMethod(object):
 	"""
 	Temporary representation for a partially parsed Java method.
 	"""
@@ -129,11 +136,76 @@ class JavaMethod:
 		self.extra_spec = extra_spec
 		self.comment = comment
 		self.return_type = return_type.strip()
-		self.parameters = JavaMethod.parse_parameters(params)
+		self.parameters = JavaMethod.parse_parameters(params, self.comment)
 
 	@staticmethod
-	def parse_parameters(unparsed_parameter_block):
-		return unparsed_parameter_block #['(todo)']
+	def parse_parameters(unparsed_parameter_block, method_doc):
+		unparsed_parameter_block = unparsed_parameter_block.strip()
+		if not unparsed_parameter_block:
+			return []
+
+		dox = JavaHTMLFormatter.javadoc_method_extract_param_doc(method_doc)
+
+		params = []
+		source = enumerate(unparsed_parameter_block)
+		i = 0
+		# very unpythonic string parsing code. We could just use a parser gen
+		while True:
+			if i >= len(unparsed_parameter_block):
+				break
+
+			# skip leading whitespace
+			while True:
+				try:
+					i,c = next(source)
+				except StopIteration:
+					raise ParseError('failed to parse params (2): ' + unparsed_parameter_block)
+
+				if not c.isspace():
+					break
+
+			# parse type, correctly skip over generic <,> blocks
+			nest = 0
+
+			start_idx = i
+			while True:
+				try:
+					i,c = next(source)
+				except StopIteration:
+					raise ParseError('failed to parse params: ' + unparsed_parameter_block)
+				if c == '<':
+					nest += 1;
+				elif c == '>':
+					assert nest > 0
+					nest -= 1;
+
+				if nest == 0 and c.isspace():
+					param_type = unparsed_parameter_block[start_idx:i]
+					if not param_type:
+						raise ParseError('failed to parse parameter type: ' + unparsed_parameter_block)
+					
+					assert param_type == param_type.strip()
+					break
+
+			assert nest == 0
+
+			# parse parameter name
+			start_idx = i
+			while True:
+				try:
+					i,c = next(source)
+					if c == ',':
+						break
+				except StopIteration:
+					i += 1
+					break
+
+			param_name = unparsed_parameter_block[start_idx:i].strip()
+			if not param_name:
+				raise ParseError('failed to parse parameter name: ' + unparsed_parameter_block)
+
+			params.append((param_type, param_name, dox.get(param_name, "")));
+		return params
 
 	def get_infoset(self):
 		import copy
@@ -142,7 +214,7 @@ class JavaMethod:
 		return info
 
 
-class JavaClass:
+class JavaClass(object):
 	"""
 	Temporary representation for a partially parsed Java class.
 	"""
@@ -282,8 +354,12 @@ class JavaProcessor(Processor):
 
 			# TODO: handle inner classes
 			#self.find_classes(buffer[class_body_range[0]:class_body_range[1]], entries)
-			c = JavaClass(match,buffer[class_body_range[0]:class_body_range[1]])
-			entries[c.name] = c
+			try:
+				c = JavaClass(match,buffer[class_body_range[0]:class_body_range[1]])
+				entries[c.name] = c
+			except ParseError as p:
+				print('Error parsing class, ignoring: ' + str(p))
+				
 			
 			
 
