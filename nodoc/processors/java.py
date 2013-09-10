@@ -93,18 +93,34 @@ class JavaHTMLFormatter(object):
 
 
 	@staticmethod
+	def javadoc_method_extract_references(block):
+		"""
+		Extracts external or internal references (@see) from a JavaDoc method doc.
+
+		Produces a list of references (in input order).
+		"""
+		return [m for m in re.findall(r'@see\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL)]
+
+
+	@staticmethod
 	def javadoc_method_doc_to_html(block, run_markdown = True):
 		"""
 		Given a javadoc annotated method commentary, generate appropriate HTML,
-		dropping the commentary for parameters.
+		dropping the commentary for parameters and references.
 		"""
 
 		block = JavaHTMLFormatter.javadoc_block_to_html(block, run_markdown = False)
 		def erase_param(match): 
 			return ''
 
+		def erase_reference(match): 
+			return ''
+
 		block = re.sub(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',
 			erase_param, block, 0, re.DOTALL)
+
+		block = re.sub(r'@see\s+(.*?)(?=@|\n\s*\n|$)',
+			erase_reference, block, 0, re.DOTALL)
 
 		block = re.sub(r'@(?:throws?|exception)(.*?)(?=@|\n\s*\n|$)',
 			r'<br><font color="darkred"> &dagger; </font> \1', block,
@@ -140,6 +156,7 @@ class JavaMethod(object):
 		self.comment = comment
 		self.return_type = return_type.strip()
 		self.parameters = JavaMethod.parse_parameters(params, self.comment)
+		self.refs = JavaHTMLFormatter.javadoc_method_extract_references(self.comment)
 
 	@staticmethod
 	def parse_parameters(unparsed_parameter_block, method_doc):
