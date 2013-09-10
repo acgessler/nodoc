@@ -163,6 +163,11 @@ li.search_entry_java_class span.class_package {
   font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
 }
 
+.method_reference ul li {
+  margin: 0px;
+  vertical-align: top;
+}
+
 .index {
   clear: both;
 }
