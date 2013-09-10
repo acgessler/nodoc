@@ -72,7 +72,7 @@ return function(settings) {
 				'<span class="method_name"> <%= name %> </span>' +
 				'<span class="method_param_list"> (<%= param_list %>) </span>'+
 			'</h3>  ' +
-			'<table> <%= param_doc %> </table> <%= comment %> <hr> '+
+			'<table> <%= param_doc %> </table> <%= comment %>  <%= reference_block %> <hr> '+
 		'</div>');
 
 	var method_param_template = _.template(
@@ -81,6 +81,14 @@ return function(settings) {
 			' <td> <span class="param_doc_name"> <%= name %> </span> </td>'+
 			' <td> <span class="param_doc_text"> <%= doc %>  </span> </td>'+
 		'</span> <tr/>'
+	);
+
+	var method_reference_template = _.template(
+		'<li> <span class="try_auto_link"> <%= target %> </span> </li>'
+	);
+
+	var method_reference_block_template = _.template(
+		'<br> <b> See also: </b> <span class="method_reference"><ul> <%= references %> </ul> </span>'
 	);
 
 	var class_template = _.template(
@@ -718,12 +726,25 @@ return function(settings) {
 								}));
 							}
 
+							var refs_dox_entries = [];
+							for(var j = 0; j < data.refs.length; ++j) {
+								refs_dox_entries.push(method_reference_template({
+									  target : data.refs[j]
+								}));
+							}
+
 							var param_string = data.parameters.length == 0 ? '' : data.parameters.length;
+							var refs_block = data.refs.length == 0 ? '' 
+								: method_reference_block_template({
+									references : refs_dox_entries.join('')
+									});
+
 							var params = $.extend({
 								  link_info : get_method_link_name(data.name, i)
 								, index_in_class : n++
 								, param_doc : param_dox_entries.join('')
 								, param_list : param_string
+								, reference_block : refs_block
 							}, data);
 
 							builder.push(method_full_template(params));
