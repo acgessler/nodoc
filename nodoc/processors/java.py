@@ -60,19 +60,39 @@ for k in list(rex.keys()):
 class JavaHTMLFormatter(object):
 	"""Static utilities for formatting JavaDoc snippets to HTML"""
 
+
 	@staticmethod
-	def javadoc_block_to_html(block, run_markdown = True):
+	def javadoc_strip_asterisks(block):
+		"""
+		Given a javadoc annotated text block, strip any trailing asterisks from each line.
+		"""
+		# TODO: also handle line comments
+		lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
+		lines = [line[1:] if line[0] == '*' else line for line in lines]
+		return '\n'.join(lines)
+
+
+	@staticmethod
+	def javadoc_block_to_html(block, run_markdown = True, strip_p_envelope = False):
 		"""
 		Given a javadoc annotated text block, generate appropriate HTML
 		"""
-		lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
-		lines = [line[1:] if line[0] == '*' else line for line in lines]
-		block = '\n'.join(lines)
+		block = JavaHTMLFormatter.javadoc_strip_asterisks(block);
 
 		block = re.sub(r'@author(.*?)$',r'Authors: __\1__', block)
 		block = re.sub(r'\{\s*@code\s+(.*?)\s*\}',r'<tt>\1</tt>', block) # todo: regex cannot handle this
 		block = re.sub(r'\{\s*@link\s+(.*?)\s*\}',r'\1</tt>', block) 
-		return markdown.markdown(block) if run_markdown else block
+		
+		res = markdown.markdown(block) if run_markdown else block
+
+		# strip the outer <p> </p> block that markdown generates?
+		if strip_p_envelope:
+			while True:
+				old = res
+				res = re.sub(r'^\s*<p>(.*)<\/p>\s*$',r'\1', res);
+				if old == res:
+					break
+		return res
 
 
 	@staticmethod
@@ -84,12 +104,25 @@ class JavaHTMLFormatter(object):
 		"""
 		params_out = {}
 		for match in re.findall(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL):
-			html = JavaHTMLFormatter.javadoc_block_to_html(match[1])
-			# strip the outer <p> </p> block that markdown inevitably generates
-			html = re.sub(r'^\s*<p>(.*)<\/p>\s*$',r'\1', html);
+			html = JavaHTMLFormatter.javadoc_block_to_html(match[1], strip_p_envelope=True)
 			params_out[match[0]] = html
 
 		return params_out
+
+
+	@staticmethod
+	def javadoc_method_extract_exceptions(block):
+		"""
+		Extracts exception documentation from a JavaDoc method doc.
+
+		Produces a dictionary mapping exception types to dox.
+		"""
+		exceptions_out = {}
+		for match in re.findall(r'@(?:throws?|exception)\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL):
+			html = JavaHTMLFormatter.javadoc_block_to_html(match[1], strip_p_envelope=True)
+			exceptions_out[match[0]] = html
+
+		return exceptions_out
 
 
 	@staticmethod
@@ -99,7 +132,29 @@ class JavaHTMLFormatter(object):
 
 		Produces a list of references (in input order).
 		"""
-		return [m for m in re.findall(r'@see\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL)]
+		return re.findall(r'@see\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL)
+
+
+	@staticmethod
+	def javadoc_method_extract_since(block):
+		"""
+		Extracts the value of the @since attribute, if any.
+
+		Produces a single string (empty if not found).
+		"""
+		res = re.search(r'@since\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL)
+		return res.group(1) if res else ''
+
+
+	@staticmethod
+	def javadoc_method_extract_return(block):
+		"""
+		Extracts the value of the @return attribute, if any.
+
+		Produces a single string (empty if not found).
+		"""
+		res = re.search(r'@returns?\s+(.*?)(?=@|\n\s*\n|$)',block, re.DOTALL) or ''
+		return res.group(1) if res else ''
 
 
 	@staticmethod
@@ -110,27 +165,15 @@ class JavaHTMLFormatter(object):
 		"""
 
 		block = JavaHTMLFormatter.javadoc_block_to_html(block, run_markdown = False)
-		def erase_param(match): 
-			return ''
 
-		def erase_reference(match): 
-			return ''
-
-		block = re.sub(r'@param\s*(.*?)\s+(.*?)(?=@|\n\s*\n|$)',
-			erase_param, block, 0, re.DOTALL)
-
-		block = re.sub(r'@see\s+(.*?)(?=@|\n\s*\n|$)',
-			erase_reference, block, 0, re.DOTALL)
-
-		block = re.sub(r'@(?:throws?|exception)(.*?)(?=@|\n\s*\n|$)',
-			r'<br><font color="darkred"> &dagger; </font> \1', block,
-			0, re.DOTALL)
-
-		block = re.sub(r'@return(.*?)(?=@|\n\s*\n|$)',
-			r'<br><b>&crarr;</b> \1', block,
-			0, re.DOTALL)
-
+		# notes are currently baked into the html
 		block = re.sub(r'@note(.*?)',r'<br> __Note__: \1', block)
+		
+		# drop all tag blocks. Use a whitelist to make sure we don't accidentially
+		# eat tag blocks that are not extracted before
+		block = re.sub(r'@(see|param|since|throws?|exception|returns?)\s+(.*?)(?=@|\n\s*\n|$)',
+			'', block, 0, re.DOTALL)
+
 		return markdown.markdown(block) if run_markdown else block
 
 
@@ -153,10 +196,13 @@ class JavaMethod(object):
 		self.name = name
 		self.access_spec = access_spec
 		self.extra_spec = extra_spec
-		self.comment = comment
+		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.return_type = return_type.strip()
 		self.parameters = JavaMethod.parse_parameters(params, self.comment)
 		self.refs = JavaHTMLFormatter.javadoc_method_extract_references(self.comment)
+		self.throws = JavaHTMLFormatter.javadoc_method_extract_exceptions(self.comment)
+		self.since = JavaHTMLFormatter.javadoc_method_extract_since(self.comment)
+		self.returns = JavaHTMLFormatter.javadoc_method_extract_return(self.comment)
 
 	@staticmethod
 	def parse_parameters(unparsed_parameter_block, method_doc):
