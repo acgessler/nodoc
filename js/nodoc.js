@@ -91,7 +91,7 @@ return function(settings) {
 	);
 
 	var method_reference_block_template = _.template(
-		'<br> <b> See also: </b> <span class="method_reference"><ul> <%= references %> </ul> </span>'
+		'<b> See also: </b> <span class="method_reference"><ul> <%= references %> </ul> </span>'
 	);
 
 	var method_returns_block_template = _.template(
