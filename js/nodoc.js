@@ -72,7 +72,10 @@ return function(settings) {
 				'<span class="method_name"> <%= name %> </span>' +
 				'<span class="method_param_list"> (<%= param_list %>) </span>'+
 			'</h3>  ' +
-			'<table> <%= param_doc %> </table> <%= comment %>  <%= reference_block %> <hr> '+
+			'<table> <%= param_doc %> </table> ' +
+			'<%= returns_block %>' +
+			'<%= comment %>  ' +
+			'<%= reference_block %> <hr> '+
 		'</div>');
 
 	var method_param_template = _.template(
@@ -89,6 +92,10 @@ return function(settings) {
 
 	var method_reference_block_template = _.template(
 		'<br> <b> See also: </b> <span class="method_reference"><ul> <%= references %> </ul> </span>'
+	);
+
+	var method_returns_block_template = _.template(
+		'<b> <font size="+1"> &crarr; </font> </b> <span class="method_returns"> <%= returns %> </span>'
 	);
 
 	var class_template = _.template(
@@ -739,12 +746,18 @@ return function(settings) {
 									references : refs_dox_entries.join('')
 									});
 
+							var returns_block = $.trim(data.returns.length) == 0 ? ''
+								: method_returns_block_template({
+									returns : data.returns
+								});
+
 							var params = $.extend({
 								  link_info : get_method_link_name(data.name, i)
 								, index_in_class : n++
 								, param_doc : param_dox_entries.join('')
 								, param_list : param_string
 								, reference_block : refs_block
+								, returns_block : returns_block
 							}, data);
 
 							builder.push(method_full_template(params));
