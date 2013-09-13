@@ -87,7 +87,7 @@ return function(settings) {
 	);
 
 	var method_reference_template = _.template(
-		'<li> <span class="try_auto_link"> <%= target %> </span> </li>'
+		'<li> <span class="try_auto_link lazy_auto_link"> <%= target %> </span> </li>'
 	);
 
 	var method_reference_block_template = _.template(
@@ -792,6 +792,13 @@ return function(settings) {
 
 			var _view_planes_manager = null;
 
+			// handle the 'a#b' syntax for referencing (external) members 
+			// by reducing it to 'a.b' canonical form.
+			var _replace_alternative_link_syntax = function(text) {
+				return text.replace(/\b(\w*)#(\w+)\b/g, '$1.$2');
+			};
+
+
 			/** Get class name without package */
 			var get_name = this.get_name = function() {
 				return infoset.name;
@@ -814,6 +821,7 @@ return function(settings) {
 				return function() {
 					if(class_main_page === null) {
 						var method_renderer = get_method_renderer();
+						// TODO: invoke text = _replace_alternative_link_syntax(text);
 						var text = class_template(infoset);
 						
 						// wrapping it in a div is necessary to be able to use find() on the
@@ -873,7 +881,13 @@ return function(settings) {
 					});
 
 					page.find('.try_auto_link').each(function() {
-						controller_inst.add_text_auto_link_entry($(this), self);
+						var $this = $(this);
+						var target = $this.text();
+
+						var newt = _replace_alternative_link_syntax(target);
+						$this.text(newt);
+
+						controller_inst.add_text_auto_link_entry($this, self);
 					});
 
 					// also auto-link types in code snippets already highlighted
