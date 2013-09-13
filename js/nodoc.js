@@ -152,8 +152,7 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function ViewPlane(str_selector) {
 
-			// TODO: make it so that we can query the DOM node once and cache it -
-			// right now the node may change.
+			var $anchor = $(str_selector);
 
 			var successor = null;
 			var page_stack = [];
@@ -175,18 +174,18 @@ return function(settings) {
 					return;
 				}
 
-				var $elem = $(str_selector);
+
 				var duration = 200 * fade_speed_multiplier;
 
 				successor = new_successor;
 
 				var commit = function() {
-					$elem.empty();
-					$elem.append(successor.contents);
+					$anchor.empty();
+					$anchor.append(successor.contents);
 
 					var successor_copy = successor;
 					if (!successor_copy.no_scrollbars) {
-						$elem.mCustomScrollbar({
+						$anchor.mCustomScrollbar({
 						  	theme: "light2"
 						  	, mouseWheelPixels: 600 
 							, scrollButtons: {
@@ -196,7 +195,7 @@ return function(settings) {
 					}
 
 					var commit = function() {
-						$elem.mCustomScrollbar("update");
+						$anchor.mCustomScrollbar("update");
 
 						// TODO: do async and narrow down focus
 						prettyPrint();
@@ -206,7 +205,7 @@ return function(settings) {
 						commit();
 					}
 					else {
-						$elem.fadeIn(duration, commit);
+						$anchor.fadeIn(duration, commit);
 					}
 					successor = null;
 				};
@@ -215,29 +214,38 @@ return function(settings) {
 					commit();
 				}
 				else {
-					$elem.fadeOut(duration, commit);
+					$anchor.fadeOut(duration, commit);
 				}
 			};
 
 			this.push = function(contents, settings) {
-				this.set(contents, settings);
-				page_stack.push([$(str_selector).clone(true)]);
+				
+				if(contents != null) {
+					page_stack.push($anchor.children().detach());
+					this.set(contents, settings);
+				}
+				else {
+					page_stack.push(null);
+				}
 			};
 
 			this.pop = function(settings) {
-				page_stack.pop();
 				var elem = page_stack[page_stack.length - 1];
-				$(str_selector).replaceWith(elem);
+				if(elem !== null) {
+					$anchor.empty();
+					$anchor.append(elem);
+				}
+				page_stack.pop();
 			};
 
 			this.scrollTo = function(selector, settings) {
 				// have to get the ID because scrollTo does not accept arbitrary jQuery selectors
 				var el_id = '#' + $(selector).first().attr('id');
-				$(str_selector).mCustomScrollbar("scrollTo",el_id, settings);
+				$anchor.mCustomScrollbar("scrollTo",el_id, settings);
 			};
 
 			this.update_scrollbars = function() {
-				$(str_selector).mCustomScrollbar("update");
+				$anchor.mCustomScrollbar("update");
 			};
 		};
 
@@ -544,13 +552,14 @@ return function(settings) {
 								return;
 							}
 							var renderer = new view.ClassRenderer(infoset);
+							var undo = null;
 
 							on_enter = function() {
-								renderer.preview_to(class_renderer.get_active_view_planes_manager(), true);
+								undo = renderer.preview_to(class_renderer.get_active_view_planes_manager(), true);
 							};
 
 							on_leave = function() {
-
+								undo();
 							};
 
 							on_click = function() {
@@ -829,11 +838,16 @@ return function(settings) {
 				}
 			})();
 
-			/** Show a preview of the class - a short brief - on the right view plane */
+			/** Show a preview of the class - a short brief - on the right view plane
+			 *  and return a callable that undoes the preview. */
 			this.preview_to = function(view_planes_manager, keep_left_side) {
 				// TODO: remove from previous view planes manager?
-				view_planes_manager.set(keep_left_side ? null : '', get_class_main_page());
+				view_planes_manager.push(keep_left_side ? null : '', get_class_main_page());
 				_view_planes_manager = view_planes_manager;
+
+				return function() {
+					view_planes_manager.pop();
+				};
 			};
 
 			/** Open the full class view in both planes */
