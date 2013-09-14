@@ -397,18 +397,28 @@ return function(settings) {
 		function PageController(view_planes_manager) {
 
 			var get = function(what, completion) {
-				fetch_infoset('output/class_' + what + '.json', function(infoset) {
-					if (!infoset) {
-						if (completion) {
-							completion(false);
-						}	
-						return;
-					}
 
-					// TODO: allocate model instance
-					var renderer = new view.ClassRenderer(infoset);
-					completion(infoset, renderer);
-				});
+				var renderer_factory = function(model) {
+					// TODO: different renderer types depending on model type
+					return new view.ClassRenderer(model);
+				};
+
+				if(_.isString(what)) {
+					fetch_infoset('output/class_' + what + '.json', function(infoset) {
+						if (!infoset) {
+							if (completion) {
+								completion(false);
+							}	
+							return;
+						}
+
+						// TODO: allocate model wrapper instance instead of using the raw data
+						completion(infoset, renderer_factory(infoset));
+					});
+				}
+				else {
+					completion(what, renderer_factory(what));
+				}
 			};
 
 			var show_loading_screen = function() {
