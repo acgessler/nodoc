@@ -396,8 +396,7 @@ return function(settings) {
 		// ----------------------------------------------------------------------------------------
 		function PageController(view_planes_manager) {
 
-			var get = function(what, completion) {
-
+			var _get = function(what, completion) {
 				var renderer_factory = function(model) {
 					// TODO: different renderer types depending on model type
 					return new view.ClassRenderer(model);
@@ -421,7 +420,7 @@ return function(settings) {
 				}
 			};
 
-			var show_loading_screen = function() {
+			var _show_loading_screen = function() {
 				var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
 
 				if(show_loading) {
@@ -431,17 +430,44 @@ return function(settings) {
 				}
 			};
 
+			// 0: left, 1: right
+			var _preview = function(left_or_right, what, settings, completion) {
+				var undo = null;
+				_get(what, function(model, renderer) {
+					if(!model) {
+						if(completion) {
+							completion(false);
+						}
+						return;
+					}
+
+					undo = renderer.preview_to(left_or_right,view_planes_manager, true);
+
+					if(completion) {
+						completion(true);
+					}
+				});
+
+				// return a future to undo the operation
+				return function() {
+					if(undo) {
+						undo();
+					}
+				};
+			};
+
 			return {
 				get_view_planes_manager : function() {
 					return view_planes_manager;
 				},
 
+
 				open : function(what, settings, completion) {
 					settings = settings || {};
 
-					show_loading_screen(settings);
+					_show_loading_screen(settings);
 					
-					get(what, function(model, renderer) {
+					_get(what, function(model, renderer) {
 						if(!model) {
 							if(completion) {
 								completion(false);
@@ -467,35 +493,21 @@ return function(settings) {
 					});
 				},
 
-				preview_right : function(what, settings, completion) {
-					var undo = null;
-					get(what, function(model, renderer) {
-						if(!model) {
-							if(completion) {
-								completion(false);
-							}
-							return;
-						}
-
-						undo = renderer.preview_to(view_planes_manager, true);
-
-						if(completion) {
-							completion(true);
-						}
-					});
-
-					// return a future to undo the operation
-					return function() {
-						if(undo) {
-							undo();
-						}
-					};
+			
+				preview_left : function(what, settings, completion) {
+					return _preview(0, what, settings, completion);
 				},
+
+
+				preview_right : function(what, settings, completion) {
+					return _preview(1, what, settings, completion);
+				},
+
 
 				lookup : function(what, callback) {
 					// TODO: more refined update logic
-					get(what, callback);
-				},
+					_get(what, callback);
+				}
 			};
 		};
 
@@ -956,9 +968,15 @@ return function(settings) {
 
 			/** Show a preview of the class - a short brief - on the right view plane
 			 *  and return a callable that undoes the preview. */
-			this.preview_to = function(view_planes_manager, keep_left_side) {
+			this.preview_to = function(left_or_right, view_planes_manager, keep_other_side) {
 				// TODO: remove from previous view planes manager?
-				view_planes_manager.push(keep_left_side ? null : '', get_class_main_page());
+				if(left_or_right === 0) {
+					view_planes_manager.push(get_class_main_page(), keep_other_side ? null : '');
+				} 
+				else {
+					view_planes_manager.push(keep_other_side ? null : '', get_class_main_page());
+				}
+				
 				_view_planes_manager = view_planes_manager;
 
 				return function() {
