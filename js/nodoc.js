@@ -304,7 +304,6 @@ return function(settings) {
 	// derived from the original javadoc
 	var model = this.model = (function() {
 
-
 		// ----------------------------------------------------------------------------------------
 		/**  Abstract index implementation that is able to deal with both package-level and
 		 *   class-level index */
@@ -391,6 +390,105 @@ return function(settings) {
 
 	// namespace for Controller components - mostly actions for different kinds of UI entities
 	var controller = this.controller = (function() {
+
+		// ----------------------------------------------------------------------------------------
+		/** PageController */
+		// ----------------------------------------------------------------------------------------
+		function PageController(view_planes_manager) {
+
+			var get = function(what, completion) {
+				fetch_infoset('output/class_' + what + '.json', function(infoset) {
+					if (!infoset) {
+						if (completion) {
+							completion(false);
+						}	
+						return;
+					}
+
+					// TODO: allocate model instance
+					var renderer = new view.ClassRenderer(infoset);
+					completion(infoset, renderer);
+				});
+			};
+
+			var show_loading_screen = function() {
+				var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
+
+				if(show_loading) {
+					view_planes_manager.set(null, get_loading_html(), {
+						no_scollbars : true,
+					} );
+				}
+			};
+
+			return {
+				get_view_planes_manager : function() {
+					return view_planes_manager;
+				},
+
+				open : function(what, settings, completion) {
+					settings = settings || {};
+
+					show_loading_screen(settings);
+					
+					get(what, function(model, renderer) {
+						if(!model) {
+							if(completion) {
+								completion(false);
+							}
+							return;
+						}
+
+						renderer.push_to(view_planes_manager);
+
+						// add a history record to ease browser navigation
+						if(!settings.no_history) {
+							console.log('push: ' + model.name);
+
+							history.pushState({ 
+							 	  what : model.name
+							}, 
+							"TODO", "#class=" + model.name);
+						}
+
+						if(completion) {
+							completion(true);
+						}
+					});
+				},
+
+				preview_right : function(what, settings, completion) {
+					var undo = null;
+					get(what, function(model, renderer) {
+						if(!model) {
+							if(completion) {
+								completion(false);
+							}
+							return;
+						}
+
+						undo = renderer.preview_to(view_planes_manager, true);
+
+						if(completion) {
+							completion(true);
+						}
+					});
+
+					// return a future to undo the operation
+					return function() {
+						if(undo) {
+							undo();
+						}
+					};
+				},
+
+				lookup : function(what, callback) {
+					// TODO: more refined update logic
+					get(what, callback);
+				},
+			};
+		};
+
 
 		// ----------------------------------------------------------------------------------------
 		/**  */
@@ -543,32 +641,31 @@ return function(settings) {
 				}
 				// ## else see if the symbol can be resolved in a parent class
 
+
 				// TODO - temporary HACK to get package siblings, assumes index is loaded
 				// and callback is called immediately.
-				fetch_infoset('output/index.json', function(index) {
-					if (target in index) {
-						fetch_infoset('output/class_' + target + '.json', function(infoset) {
-							if (!infoset) {
-								return;
-							}
-							var renderer = new view.ClassRenderer(infoset);
-							var undo = null;
+				page_controller.lookup(target, function(model) {
+						if(!model) {
+							return;
+						}
+	
+						var undo = null;
+						on_enter = function() {
+							undo = page_controller.preview_right(model);
+						};
 
-							on_enter = function() {
-								undo = renderer.preview_to(class_renderer.get_active_view_planes_manager(), true);
-							};
-
-							on_leave = function() {
+						on_leave = function() {
+							if(undo) {
 								undo();
-							};
+							}
+						};
 
-							on_click = function() {
-								renderer.push_to(class_renderer.get_active_view_planes_manager());
-							};
+						on_click = function() {
+							page_controller.open(model);
+							
+						};
 
-							setup_autolink();
-						});
-					}
+						setup_autolink();
 				});
 
 				setup_autolink();
@@ -576,7 +673,8 @@ return function(settings) {
 		};
 
 		return {
-			ClassController : ClassController
+			  PageController : PageController
+			, ClassController : ClassController
 		};
 	})();
 
@@ -859,7 +957,7 @@ return function(settings) {
 			};
 
 			/** Open the full class view in both planes */
-			this.push_to = function(view_planes_manager) {
+			this.push_to = function(view_planes_manager, no_history) {
 				// TODO: remove from previous view planes manager?
 				var class_main_page = get_class_main_page();
 				var detail_page = get_method_renderer().get_detail();
@@ -916,47 +1014,14 @@ return function(settings) {
 	})();
 
 
+	var page_controller = new controller.PageController(new ui.ViewPlaneManager());
 
-	var view_planes = new ui.ViewPlaneManager();
 
 	var get_loading_html = function() {
 		return loading_template({text:'Loading Preview'});
 	};
 
 
-	var open_class = this.open_class = function(file, completion, settings) {
-		settings = settings || {};
-
-		var preview = settings.preview || false;
-		var show_loading = settings.show_loading === undefined ? true : settings.show_loading;
-
-		if(show_loading) {
-			view_planes.set(null, get_loading_html(), {
-				no_scollbars : true,
-			} );
-		}
-
-		fetch_infoset(file, function(infoset) {
-			if (!infoset) {
-				if (completion) {
-					completion(false);
-				}	
-				return;
-			}
-			var renderer = new view.ClassRenderer(infoset);
-
-			if(preview) {
-				renderer.preview_to(view_planes);
-			}
-			else {
-				renderer.push_to(view_planes);
-			}
-
-			if(completion) {
-				completion(true);
-			}
-		});
-	};
 
 	this.push_view = function(left, right, settings) {
 		view_planes.push(left, right, settings);
@@ -964,6 +1029,23 @@ return function(settings) {
 
 	this.pop_view = function(settings) {
 		view_planes.pop(settings);
+	};
+
+	this.open = function(what) {
+		page_controller.open(what);
+	};
+
+
+	window.onpopstate = function(event) {
+		if(!event.state) {
+			return;
+		}
+    	console.log('pop: ' + event.state.what);
+
+    	// TODO: handle more than just classes
+    	page_controller.open(history.state.kind, history.state.what, null, {
+    		no_history : true
+    	});
 	};
 
 
@@ -1034,5 +1116,5 @@ return function(settings) {
 
 function run() {
 	var doc = new DocumentationViewer();
-	doc.open_class('output/class_GraphicsConfiguration.json');
+	doc.open('GraphicsConfiguration');
 }
