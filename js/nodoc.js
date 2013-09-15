@@ -858,30 +858,34 @@ return function(settings) {
 							
 							var param_dox_entries = [];
 							//var param_list_entries = [];
-							for(var j = 0; j < data.parameters.length; ++j) {
-								var p = data.parameters[j];
-								//param_list_entries.push(p[0] + ' ' + p[1]);
-								param_dox_entries.push(method_param_template({
-									  type : p[0]
-									, name : p[1]
-									, doc  : p[2]
-								}));
+							if(data.parameters) {
+								for(var j = 0; j < data.parameters.length; ++j) {
+									var p = data.parameters[j];
+									//param_list_entries.push(p[0] + ' ' + p[1]);
+									param_dox_entries.push(method_param_template({
+										  type : p[0]
+										, name : p[1]
+										, doc  : p[2]
+									}));
+								}
 							}
 
 							var refs_dox_entries = [];
-							for(var j = 0; j < data.refs.length; ++j) {
-								refs_dox_entries.push(method_reference_template({
-									  target : data.refs[j]
-								}));
+							if(data.refs) {
+								for(var j = 0; j < data.refs.length; ++j) {
+									refs_dox_entries.push(method_reference_template({
+										  target : data.refs[j]
+									}));
+								}
 							}
 
-							var param_string = data.parameters.length == 0 ? '' : data.parameters.length;
-							var refs_block = data.refs.length == 0 ? '' 
+							var param_string = data.parameters ? data.parameters.length : '';
+							var refs_block = !data.refs ? '' 
 								: method_reference_block_template({
 									references : refs_dox_entries.join('')
 									});
 
-							var returns_block = $.trim(data.returns.length) == 0 ? ''
+							var returns_block = $.trim(data.returns) == 0 ? ''
 								: method_returns_block_template({
 									returns : data.returns
 								});
