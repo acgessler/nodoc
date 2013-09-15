@@ -28,6 +28,10 @@ table {
 	font-size: 13px;
 }
 
+p {
+	margin-bottom: 1em;
+}
+
 tt, code {
 	font-family: #{$monospace_fonts};
 }
@@ -95,6 +99,7 @@ li.search_entry_java_class {
 		color: #999999;
 	}
 }
+
 
 #live_search {
 	display: none;

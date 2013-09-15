@@ -13,6 +13,10 @@ table {
   font-size: 13px;
 }
 
+p {
+  margin-bottom: 1em;
+}
+
 tt, code {
   font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
 }
