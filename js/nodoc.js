@@ -67,7 +67,7 @@ return function(settings) {
 				
 		//		'<%= access_spec %> ' + 
 				'<span class="method_spec"> <%= extra_spec %>  </span>' +
-				'<span class="method_return_type try_auto_link"> <%= return_type %> </span>' +
+				'<span class="method_return_type try_auto_link"><%= return_type %></span>' +
 		
 				'<span class="method_name"> <%= name %> </span>' +
 				'<span class="method_param_list"> (<%= param_list %>) </span>'+
