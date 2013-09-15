@@ -65,7 +65,7 @@ return function(settings) {
 			'<div class="method_info <%= extra_spec %>"> </div> ' +
 			'<h3> '+
 				
-		//		'<%= access_spec %> ' +
+		//		'<%= access_spec %> ' + 
 				'<span class="method_spec"> <%= extra_spec %>  </span>' +
 				'<span class="method_return_type try_auto_link"> <%= return_type %> </span>' +
 		
@@ -448,6 +448,7 @@ return function(settings) {
 					}
 				});
 
+
 				// return a future to undo the operation
 				return function() {
 					if(undo) {
@@ -493,6 +494,8 @@ return function(settings) {
 					});
 				},
 
+				preview : _preview,
+
 			
 				preview_left : function(what, settings, completion) {
 					return _preview(0, what, settings, completion);
@@ -524,6 +527,7 @@ return function(settings) {
 			 *  @param target Target method name (TODO) 
 			 *  @param restore */
 			var _preview_method = function(class_renderer, target, restore, delay) {
+				// TODO: support previewing on left side
 				var doit = function() {
 					last_timeout_id = null;
 					class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target);
@@ -583,7 +587,9 @@ return function(settings) {
 
 			/** Registers event handler for automatically-generated link to an arbitrary code
 			 *  entity. Such links appear in plain text of both class and method descriptions. */
-			this.add_text_auto_link_entry = function($elem, class_renderer) {
+			this.add_text_auto_link_entry = function($elem, class_renderer, left_or_right) {
+				left_or_right = 1-(left_or_right || 0);
+
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $.trim($elem.text());
 
@@ -673,7 +679,7 @@ return function(settings) {
 	
 						var undo = null;
 						on_enter = function() {
-							undo = page_controller.preview_right(model);
+							undo = page_controller.preview(left_or_right, model);
 						};
 
 						on_leave = function() {
@@ -813,7 +819,7 @@ return function(settings) {
 							var data = overloads[i];
 
 							var param_list_entries = [];
-							for(var j = 0; j < data.parameters.length; ++j) {
+							for(var j = 0; data.parameters && j < data.parameters.length; ++j) {
 								var p = data.parameters[j];
 								param_list_entries.push(p[0] + ' ' + p[1]);
 							}
@@ -996,14 +1002,14 @@ return function(settings) {
 				// when publishing the rendered class, add event handlers using the
 				// Class Controller.
 
-				var add_links = function(page) {
+				var add_links = function(page, left_or_right) {
 					// establish link handlers to resolve methods
 					page.find('a').each(function() {
-						controller_inst.add_method_link_entry($(this), self);
+						controller_inst.add_method_link_entry($(this), self, left_or_right);
 					});
 					
 					page.find('code').each(function() {
-						controller_inst.add_text_auto_link_entry($(this), self);
+						controller_inst.add_text_auto_link_entry($(this), self, left_or_right);
 					});
 
 					page.find('.try_auto_link').each(function() {
@@ -1013,7 +1019,7 @@ return function(settings) {
 						var newt = _replace_alternative_link_syntax(target);
 						$this.text(newt);
 
-						controller_inst.add_text_auto_link_entry($this, self);
+						controller_inst.add_text_auto_link_entry($this, self, left_or_right);
 					});
 
 					// also auto-link types in code snippets already highlighted
@@ -1025,8 +1031,8 @@ return function(settings) {
 					}, 1000);
 				};
 
-				add_links(class_main_page);
-				add_links(detail_page);
+				add_links(class_main_page, 0);
+				add_links(detail_page, 1);
 			};
 
 			this.get_active_view_planes_manager = function() {
