@@ -523,15 +523,13 @@ return function(settings) {
 
 			var last_timeout_id = null;
 
-			/** Previews a method 
-			 *  @param view_plane_manager UI reference
-			 *  @param target Target method name (TODO) 
-			 *  @param restore */
-			var _preview_method = function(class_renderer, target, restore, delay) {
-				// TODO: support previewing on left side
+
+			var _call_delayed = function(callback, delay) {
+				delay = delay === undefined ? 200 : delay;
+				
 				var doit = function() {
 					last_timeout_id = null;
-					class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target);
+					callback();
 				};
 				if(last_timeout_id !== null) {
 					clearTimeout(last_timeout_id);
@@ -543,6 +541,11 @@ return function(settings) {
 				else {
 					doit(); 
 				}
+			};
+
+
+			var _preview_method = function(class_renderer, target, restore) {
+				class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target);
 			};
 
 
@@ -568,19 +571,23 @@ return function(settings) {
 				var target = $elem.data('target');
 
 				$elem.mouseenter(function() {
-					_preview_method(class_renderer, target);
+					_call_delayed(function() {
+						_preview_method(class_renderer, target)
+					});
 					return false;
 				});
 
 				$elem.mouseleave(function() {
 					// give it a small delay until we undo the preview
-					_preview_method(class_renderer, target, true, 200 );
+					_call_delayed(function() {
+						_preview_method(class_renderer, target, true);
+					}, 200);
 					return false;
 				});
 
 				$elem.click(function(e) {
 					e.preventDefault();
-					_select_method(class_renderer, target, undefined, 100 );
+					_select_method(class_renderer, target);
 					return false;
 				});
 			};
@@ -628,6 +635,7 @@ return function(settings) {
 						if(closed) {
 							return false;
 						}
+						// no delayed, because it may not be canceled
 						on_leave();
 						return false;
 					});
@@ -636,7 +644,7 @@ return function(settings) {
 						if(closed) {
 							return false;
 						}
-						on_enter();
+						_call_delayed(on_enter, 200);
 						return false;
 					});
 
@@ -656,17 +664,20 @@ return function(settings) {
 				if(method_link) { //
 					on_leave = function() {
 						// give it a small delay until we undo the preview
-						_preview_method(class_renderer, method_link, true, 200 );
+						_preview_method(class_renderer, method_link, true);
 					};
 
 					on_enter = function() {
 						// give it a small delay until we show the preview
-						_preview_method(class_renderer, method_link, undefined, 100 );
+						_preview_method(class_renderer, method_link, false);
 					};
 
 					on_click = function() {
-						_select_method(class_renderer, method_link, undefined, 100 );
+						_select_method(class_renderer, method_link, false);
 					};
+
+					setup_autolink();
+					return;
 				}
 				// ## TODO: else see if the symbol can be resolved in a parent class
 
@@ -699,12 +710,10 @@ return function(settings) {
 						on_enter = function() {
 							// special handling for methods, again
 							if(method_name) {
-								if(method_name) {
-									undo = external_renderer.preview_nested_to(method_name,
-										left_or_right, 
-										page_controller.get_view_planes_manager(),
-										true);
-								}
+								undo = external_renderer.preview_nested_to(method_name,
+									left_or_right, 
+									page_controller.get_view_planes_manager(),
+									true);
 							}
 							else {
 								undo = page_controller.preview(left_or_right, external_model);
@@ -725,8 +734,6 @@ return function(settings) {
 
 						setup_autolink();
 				});
-
-				setup_autolink();
 			};
 		};
 
