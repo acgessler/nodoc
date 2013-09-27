@@ -6,7 +6,7 @@ body {
   margin: 0px;
   color: #444444;
   font-size: 13px;
-  font-family: 'Helvetica Neue', Helvetica, Arial, freesans, sans-serif;
+  font-family: 'Open Sans','Helvetica Neue', Helvetica, Arial, freesans, sans-serif;
 }
 
 table {
@@ -47,17 +47,20 @@ tt, code {
   padding-top: 30%;
 }
 
+/*
 #searchbox {
-  padding: 2px;
-  position: absolute;
-  top: 20;
-  left: 100;
-  width: 35%;
-  height: 32px;
-  font-size: 16px;
-  box-shadow: 0 0 10px #eeeeee;
-}
+	padding: 2px;
+	position: absolute;
+    top: 20;
+    left: 100;
 
+	width: 35%;
+	height: 32px;
+
+	font-size: 16px;
+
+	box-shadow: 0 0 10px #eeeeee;
+} */
 li.search_entry_java_class span {
   padding-right: 10px;
 }
@@ -74,8 +77,8 @@ li.search_entry_java_class span.class_package {
 #live_search {
   display: none;
   cursor: pointer;
-  width: 35%;
-  height: 100%;
+  width: 350px;
+  height: 300px;
   max-height: 400px;
   position: absolute;
   top: 60;
@@ -95,23 +98,23 @@ li.search_entry_java_class span.class_package {
   background-color: #ffffff;
 }
 
-.left, .right {
+#panel_left, #panel_right {
   padding: 3%;
-  padding-top: 5%;
+  padding-top: 0%;
   margin: 0px;
   margin-top: 15px;
   overflow: auto;
   height: 100%;
 }
 
-.left {
+#panel_left {
   width: 44%;
   max-width: 50%;
   float: left;
   padding-right: 2%;
 }
 
-.right {
+#panel_right {
   padding-right: 0px;
   width: 47%;
   max-width: 60%;

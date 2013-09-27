@@ -256,8 +256,8 @@ return function(settings) {
 		 // ----------------------------------------------------------------------------------------
 		function ViewPlaneManager() {
 		
-			var _left = new ViewPlane(".left");
-			var _right = new ViewPlane(".right");
+			var _left = new ViewPlane("#panel_left");
+			var _right = new ViewPlane("#panel_right");
 
 			this.left = function() {
 				return _left;

@@ -5,7 +5,10 @@
 
 <link href="css/temp_githubstyle.css" rel="stylesheet"></link>
 <link href="css/nodoc.css" rel="stylesheet"></link>
+<link href="css/semantic.min.css" rel="stylesheet"></link>
 <link href="css/jquery.mCustomScrollbar.css" rel="stylesheet" type="text/css"></link>
+
+<link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Open+Sans:300italic,400,300,700' rel='stylesheet' type='text/css'>
 
 <link href="css/prettify.css" rel="stylesheet" type="text/css"></link>
 
@@ -16,12 +19,18 @@
 <script type="text/javascript" src="jslib/jquery.mCustomScrollbar.concat.min.js"></script>
 <script type="text/javascript" src="jslib/underscore.js"></script>
 <script type="text/javascript" src="jslib/highlighter/prettify.js"></script>
+<script type="text/javascript" src="jslib/semantic.min.js"></script>
 
 <script type="text/javascript" src="js/nodoc.js"></script>
 
 <body onload="run();">	
 
-	<form action="">
+
+ 	
+    
+      <div class="ui huge fluid inverted horizontal menu">
+
+      <!--  <form action="">
 	
 	<div id="logo"> </div>
 
@@ -29,14 +38,46 @@
  		placeholder="Type to search" >
  	
  	<div id="live_search"> </div>
- 	</form>
+ 	</form> -->
 
+        <a class="active item">
+          <i class="grid layout icon"></i> Index
+        </a>
+        
 
-	<div class="left">
-	</div>
+        <div class="borderless item">
+	      <div class="ui icon input">
+	        <input type="text"  autocomplete="off" placeholder="Search..." id="searchbox">
+	        <i class="search link icon"></i>
+	        <div id="live_search"> </div>
+	      </div>
+	    </div>
 
-	<div class="right">
-	</div>
+        <div class="right menu">
+
+        	<a class="item">
+          		<i class="bookmark icon"></i> <b>Bookmarks</b> <span class="ui label">213</span>     
+        	</a>
+
+	        <div class="ui dropdown item">
+	          <i class="dropdown icon"></i> About
+
+	          <div class="ui menu transition hidden">
+	          	  	<a class="item"><i class="edit icon"></i> Edit Profile</a>
+      				<a class="item"><i class="globe icon"></i> Choose Language</a>
+      				<a class="item"><i class="settings icon"></i> Account Settings</a>
+	          </div>
+	        </div>
+
+        </div>div>
+       
+
+     </div>
+  
+   
+    <div id="panel_left"> </div>
+    <div id="panel_right"> </div>
+ 
 
 </body>
 
