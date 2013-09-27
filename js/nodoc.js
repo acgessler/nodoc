@@ -403,6 +403,8 @@ return function(settings) {
 				};
 
 				if(_.isString(what)) {
+
+
 					fetch_infoset('output/class_' + what + '.json', function(infoset) {
 						if (!infoset) {
 							if (completion) {
@@ -467,7 +469,6 @@ return function(settings) {
 					settings = settings || {};
 
 					_show_loading_screen(settings);
-					
 					_get(what, function(model, renderer) {
 						if(!model) {
 							if(completion) {
@@ -595,7 +596,7 @@ return function(settings) {
 
 				// handle cases in which links to methods are made by giving
 				// parentheses and possibly even parameter or parameter types.
-				// We don't resolve overloads, though.
+				// We don't resolve overloads, though (TODO).
 				if (target[target.length - 1] === ')') {
 					var index = target.indexOf('(');
 					if(index !== -1) {
@@ -651,8 +652,8 @@ return function(settings) {
 				};
 
 				// ## check if this link can be resolved to a method in the current class
-				if(target in infoset.members) {
-					var method_link = class_renderer.get_method_renderer().get_method_link_name(target,0);
+				var method_link = class_renderer.get_method_renderer().resolve_method_overload(target);
+				if(method_link) { //
 					on_leave = function() {
 						// give it a small delay until we undo the preview
 						_preview_method(class_renderer, method_link, true, 200 );
@@ -667,19 +668,48 @@ return function(settings) {
 						_select_method(class_renderer, method_link, undefined, 100 );
 					};
 				}
-				// ## else see if the symbol can be resolved in a parent class
+				// ## TODO: else see if the symbol can be resolved in a parent class
+
+
+				// ## check if the link looks as if it was a link to a method
+				// in another class. If so, load the class first, then 
+				// scope to the method later (there is no way to only load methods,
+				// and the page controller does not know about methods either).
+				var lastdot = target.lastIndexOf('.');
+				var method_name = null;
+				if(lastdot !== -1 && lastdot < target.length-1) {
+					// TODO: this relies on standard naming convention (methods
+					// with small caps) and will therefore not work for arbitrary
+					// code bases.
+					if (/[a-z]/.test(target[lastdot + 1])) {
+						method_name = target.slice(lastdot + 1);
+						target = target.slice(0, lastdot);
+					}
+				}
 
 
 				// TODO - temporary HACK to get package siblings, assumes index is loaded
 				// and callback is called immediately.
-				page_controller.lookup(target, function(model) {
+				page_controller.lookup(target, function(external_model, external_renderer) {
 						if(!model) {
 							return;
 						}
 	
 						var undo = null;
 						on_enter = function() {
-							undo = page_controller.preview(left_or_right, model);
+							// special handling for methods, again
+							if(method_name) {
+								if(method_name) {
+									undo = external_renderer.preview_nested_to(method_name,
+										left_or_right, 
+										page_controller.get_view_planes_manager(),
+										true);
+								}
+							}
+							else {
+								undo = page_controller.preview(left_or_right, external_model);
+							}
+							
 						};
 
 						on_leave = function() {
@@ -689,7 +719,7 @@ return function(settings) {
 						};
 
 						on_click = function() {
-							page_controller.open(model);
+							page_controller.open(external_model);
 							
 						};
 
@@ -732,11 +762,20 @@ return function(settings) {
 			};
 
 			var _update_details = function() {
+				if(!methods) { // not created yet - fine, nothing to update.
+					return;
+				}
+				var no_specific_overload = _scope_details_to_single_func && 
+					_scope_details_to_single_func[_scope_details_to_single_func.length-1] === '_';
 				methods.find('div.method').each(function() {
 					var $this = $(this);
 					var id = $this.attr('id');
 
 					if(_scope_details_to_single_func) {
+
+						if(no_specific_overload) {
+							id = id.slice(0,_scope_details_to_single_func.length);
+						}
 						if(id === _scope_details_to_single_func) {
 							$this.hide();
 							$this.fadeIn();
@@ -750,20 +789,52 @@ return function(settings) {
 					}
 				});
 
+				// TODO: solve this globally and avoid the dependency
 				var v = class_renderer.get_active_view_planes_manager();
-				v.update_scrollbars();
+				if(v) {
+					v.update_scrollbars();
+				}
 			};
+
+
+			// TODO: move some logic to separate unit (Controller)
+
 
 			/** Get an unique name ("link name") to identify a method based on its name and 
 			 *  its index in the list of overloads sharing this name. */
 			var get_method_link_name = this.get_method_link_name = function(name, index) {			
-				return 'method_' + name + '_' + index;
+				return get_method_base_link_name(name) + index;
+			};
+
+			/** Get an unique name ("link name") to identify a method based on its name.
+			 *  Unlike get_method_link_name() this does not identify the overload, if
+			 *  the method has any.*/
+			var get_method_base_link_name = this.get_method_base_link_name = function(name) {			
+				return 'method_' + name + '_';
+			};
+
+			/** Obtain a method link name compatible with get_method_link_name() for a given
+			 *  method spec, which may include parameters. The overload index is chosen based
+			 *  on the parameter types provided to the method. The process is fuzzy though,
+			 *  and by no means a re-make of Java's lookup rules. If `ignore_overload_match_failure`
+			 *  is set to `true`, a method base index (see get_method_base_link_name()) is returned
+			 *  iff the method name exists but the overload could not be determined.
+			 *
+			 *  A `null` is returned if the method name could not be found in the class,
+			 *  or the input is malformed.*/
+			var resolve_method_overload = this.resolve_method_overload = function(name, ignore_overload_match_failure) {
+				if(!(name in members)) {
+					return null;
+				};
+				return this.get_method_base_link_name(name);
 			};
 
 
 			/** Property that determines whether the details view is scoped to a single 
-			 *  function which is given by a link name. */
-			var scope_details_to_single_func = this.scope_details_to_single_func = function(link_name) {
+			 *  function which is given by a link name. This method supports link names
+			 *  that leave the overload open (i.e. get_method_base_link_name()), in
+			 *  which case all overloads are displayed.*/
+			var scope_details_to_single_func = this.scope_details_to_single_func = function(link_name, all_overloads) {
 				if(link_name === undefined) {
 					return _scope_details_to_single_func;
 				}
@@ -906,11 +977,13 @@ return function(settings) {
 
 					// wrap in a <div>
 					methods = $('<div>' + methods + '</div>');
+					_update_details();
 				}
 
 				return methods;
 			};
 		};
+
 
 		// ----------------------------------------------------------------------------------------
 		/** Generates the HTML/DOM for one class info file */
@@ -975,6 +1048,35 @@ return function(settings) {
 					return class_main_page;
 				}
 			})();
+
+			/** Preview a nested item, such as an inner class or a method. The `which`
+			 *  parameter receives the unqualified (unrsolved, not cleaned up) name of 
+			 *  the nested item */
+			this.preview_nested_to = function(which, left_or_right, view_planes_manager, keep_other_side) {
+				// if the requested member is a method, we simply
+				var method_renderer = get_method_renderer();
+				var method = method_renderer.resolve_method_overload(which, true);
+				if(method) {
+					method_renderer.scope_details_to_single_func(method);
+					if(left_or_right === 0) {
+						view_planes_manager.push(method_renderer.get_detail(), keep_other_side ? null : '');
+					}
+					else {
+						view_planes_manager.push(keep_other_side ? null : '', method_renderer.get_details());
+					}
+					
+					return function() {
+						view_planes_manager.pop();
+					};
+				}
+
+				// TODO: handle inner classes
+				console.log('preview_nested_to - niy: ' + which);
+			};
+
+			this.push_nested_to = function(view_planes_manager, no_history) {
+				// TODO
+			};
 
 			/** Show a preview of the class - a short brief - on the right view plane
 			 *  and return a callable that undoes the preview. */
