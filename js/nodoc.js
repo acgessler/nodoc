@@ -144,6 +144,60 @@ return function(settings) {
 			'</span>' +
 		'</li>');
 
+	// http://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html
+	var java_keywords = {
+		'abstract' : 1,
+		'continue' : 1,
+		'for' : 1,
+		'new' : 1,
+		'switch' : 1,
+		'assert' : 1,
+		'default' : 1,
+		'goto' : 1,
+		'package' : 1,
+		'synchronized' : 1,
+		'boolean' : 1,
+		'do' : 1,
+		'if' : 1,
+		'private' : 1,
+		'this' : 1,
+		'break' : 1,
+		'double' : 1,
+		'implements' : 1,
+		'protected' : 1,
+		'throw' : 1,
+		'byte' : 1,
+		'else' : 1,
+		'import' : 1,
+		'public' : 1,
+		'throws' : 1,
+		'case' : 1,
+		'enum' : 1,
+		'instanceof' : 1,
+		'return' : 1,
+		'transient' : 1,
+		'catch' : 1,
+		'extends' : 1,
+		'int' : 1,
+		'short' : 1,
+		'try' : 1,
+		'char' : 1,
+		'final' : 1,
+		'interface' : 1,
+		'static' : 1,
+		'void' : 1,
+		'class' : 1,
+		'finally' : 1,
+		'long' : 1,
+		'strictfp' : 1,
+		'volatile' : 1,
+		'const' : 1,
+		'float' : 1,
+		'native' : 1,
+		'super' : 1,
+		'while' : 1
+	};
+
 	// namespace for User-Interface utilities
 	var ui = this.ui = (function() {
 
@@ -600,6 +654,11 @@ return function(settings) {
 
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $.trim($elem.text());
+
+				// exclude java keywords from auto-linking. 
+				if(target in java_keywords) {
+					return;
+				}
 
 				// handle cases in which links to methods are made by giving
 				// parentheses and possibly even parameter or parameter types.
