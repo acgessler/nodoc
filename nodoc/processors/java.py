@@ -348,7 +348,7 @@ class JavaClass(object):
 		self.members = {}
 
 		comment, access_spec, abstract_final_spec, class_interface_spec, name = regex_match.groups()
-		self.comment = comment
+		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.access_spec = access_spec
 		self.abstract_final_spec = abstract_final_spec
 		self.class_interface_spec = class_interface_spec
