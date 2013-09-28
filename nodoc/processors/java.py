@@ -51,6 +51,25 @@ rex = {
 		# closing parameter block parentheses
 		 \s*\)							
 	"""
+
+	# matches a javadoc comment on top of a field, along with the field declaration
+	, 'java-field-head' : r""" 
+		# start of multiline comment
+		\/\*\*		
+		# actual comment
+		(.*?)		
+		# end of multiline comment
+		\*\/\s*		
+
+		# java access specifier
+		(public|private|protected|)\s*	
+		# java modifiers
+		((?:(?:final|synchronized|static)\s+)*)	
+		# type, cannot be further tackled with a regex		
+		(\S*?)\s+						
+		# name of the field
+		(\w+?)\s+												
+	"""
 }
 
 for k in list(rex.keys()):
@@ -177,9 +196,41 @@ class JavaHTMLFormatter(object):
 		return markdown.markdown(block) if run_markdown else block
 
 
+	@staticmethod
+	def javadoc_field_doc_to_html(*args, **kwargs):
+		return JavaHTMLFormatter.javadoc_method_doc_to_html(*args, **kwargs)
+
+
 class ParseError(Exception):
 	def __init__(self, str):
 		Exception.__init__(self, str)
+
+
+class JavaField(object):
+	"""
+	Temporary representation for a partially parsed Java field.
+	"""
+
+	def __init__(self, regex_match):
+		"""
+		`regex_match` - match against rex['java-field-head']
+		"""
+		comment, access_spec, extra_spec, type, name = regex_match.groups()
+
+		self.name = name
+		self.access_spec = access_spec
+		self.extra_spec = extra_spec
+		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
+		self.type = type.strip()
+		self.refs = JavaHTMLFormatter.javadoc_method_extract_references(self.comment)
+		self.since = JavaHTMLFormatter.javadoc_method_extract_since(self.comment)
+
+	def get_infoset(self):
+		import copy
+		info = copy.copy(self.__dict__)
+		info['comment'] = JavaHTMLFormatter.javadoc_field_doc_to_html(info['comment'])
+		info['type'] = 'field'
+		return info
 
 
 class JavaMethod(object):
@@ -277,6 +328,7 @@ class JavaMethod(object):
 		import copy
 		info = copy.copy(self.__dict__)
 		info['comment'] = JavaHTMLFormatter.javadoc_method_doc_to_html(info['comment'])
+		info['type'] = 'method'
 		return info
 
 
@@ -289,7 +341,7 @@ class JavaClass(object):
 		`regex_match` - match against rex['java-class-head']
 		`unparsed_block` - all text up until the closing braces of the class
 		"""
-		self.methods = {}
+		self.members = {}
 
 		comment, access_spec, abstract_final_spec, class_interface_spec, name = regex_match.groups()
 		self.comment = comment
@@ -301,7 +353,11 @@ class JavaClass(object):
 		# TODO: drop inner classes
 		for match in re.finditer(rex['java-method-head'], unparsed_block):
 			method = JavaMethod(match)
-			self.methods.setdefault(method.name,[]).append(method)
+			self.members.setdefault(method.name,[]).append(method)
+
+		for match in re.finditer(rex['java-field-head'], unparsed_block):
+			field = JavaField(match)
+			self.members.setdefault(field.name,[]).append(field)
 
 
 	def get_infoset(self):
@@ -315,7 +371,7 @@ class JavaClass(object):
 		class_info['long_desc'] = JavaHTMLFormatter.javadoc_block_to_html(self.comment)
 		members = class_info['members'] = {}
 
-		for name, overloads in self.methods.items():
+		for name, overloads in self.members.items():
 			out = []
 			for overload in overloads:
 				out.append(overload.get_infoset())
@@ -379,6 +435,7 @@ class JavaProcessor(Processor):
 			for k in entries.keys():
 				self.index.add(k)
 
+
 	def generate_json_doc(self, output_folder):
 		"""
 		Generate json infosets for all entries in the docset
@@ -409,7 +466,7 @@ class JavaProcessor(Processor):
 		"""
 		Given a text buffer, find all classes (inner and outer), parse them
 		into JavaClass instances and add them indexed by (qualified) name 
-		tio the `entries` dictionary.
+		into the `entries` dictionary.
 		"""
 		for match in re.finditer(rex['java-class-head'], buffer):
 			end_head = match.end()
