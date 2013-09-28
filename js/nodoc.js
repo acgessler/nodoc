@@ -199,7 +199,10 @@ return function(settings) {
 		'float' : 1,
 		'native' : 1,
 		'super' : 1,
-		'while' : 1
+		'while' : 1,
+		'true' : 1
+		'false' : 1
+		'null' : 1
 	};
 
 	// namespace for User-Interface utilities
@@ -662,6 +665,10 @@ return function(settings) {
 
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $.trim($elem.text());
+
+				if(!target) {
+					return;
+				}
 
 				// exclude java keywords from auto-linking. 
 				if(target in java_keywords) {
