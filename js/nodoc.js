@@ -688,10 +688,16 @@ return function(settings) {
 				// handle cases in which links to methods are made by giving
 				// parentheses and possibly even parameter or parameter types.
 				// We don't resolve overloads, though (TODO).
-				if (target[target.length - 1] === ')') {
-					var index = target.indexOf('(');
-					if(index !== -1) {
-						target = target.slice(0, index);
+				// same for [], which can happen with types
+				// same for <>, which can happen with generics
+				// Those could potentially be nested, so a regexp would not do it.
+				var remove = ['()','[]','<>'];
+				for(var i = 0; i < remove.length; ++i) {
+					if (target[target.length - 1] === remove[i][1]) {
+						var index = target.indexOf(remove[i][0]);
+						if(index !== -1) {
+							target = target.slice(0, index);
+						}
 					}
 				}
 
