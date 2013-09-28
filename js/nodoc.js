@@ -577,8 +577,9 @@ return function(settings) {
 
 			var last_timeout_id = null;
 
-
-			var _call_delayed = function(callback, delay) {
+			// let all preview/auto link effects share a single timer. Newer
+			// actions cancel earlier actions.
+			var _call_delayed = function(callback, delay, no_cancel) {
 				delay = delay === undefined ? 200 : delay;
 				
 				var doit = function() {
@@ -590,7 +591,10 @@ return function(settings) {
 					last_timeout_id = null;
 				}
 				if(delay) {
-					last_timeout_id = setTimeout(doit, delay);
+					var tid = setTimeout(doit, delay);
+					if(!no_cancel) {
+						last_timeout_id = tid;
+					}
 				}
 				else {
 					doit(); 
@@ -694,8 +698,8 @@ return function(settings) {
 						if(closed) {
 							return false;
 						}
-						// no delayed, because it may not be canceled
-						on_leave();
+						// the leave operation may not be canceled
+						_call_delayed(on_leave(), 0, true);
 						return false;
 					});
 
@@ -1254,8 +1258,12 @@ return function(settings) {
     	});
 	};
 
+	$('#index_toggler').click(function() {
+		$('.sidebar').sidebar('toggle');
+	});
 
 	if(!settings.no_search) {
+
 		// generate search box logic
 		var index = fetch_infoset('output/index.json', function(index) {
 			elems = [];
