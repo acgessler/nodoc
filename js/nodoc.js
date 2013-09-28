@@ -603,7 +603,7 @@ return function(settings) {
 
 
 			var _preview_method = function(class_renderer, target, restore) {
-				class_renderer.get_method_renderer().scope_details_to_single_func(restore ? null : target);
+				class_renderer.get_method_renderer().scope_details_to_single_member(restore ? null : target);
 			};
 
 
@@ -616,7 +616,7 @@ return function(settings) {
 					return;
 				}
 
-				class_renderer.get_method_renderer().scope_details_to_single_func(null);
+				class_renderer.get_method_renderer().scope_details_to_single_member(null);
 				view_plane_manager.right().scrollTo(link, {
 					scrollInertia : 105
 				});
@@ -810,18 +810,104 @@ return function(settings) {
 	// namespace for View components - mostly renderers for different types of Java entities
 	var view = this.view = (function() {
 
+
 		// ----------------------------------------------------------------------------------------
-		/** Generates the HTML/DOM for the methods view of a class (both index and detail view) */
+		/** Generates the HTML for class methods (and constructors) */
 		// ----------------------------------------------------------------------------------------
-		function MethodRenderer(class_renderer, members) {
+		function ClassMethodRenderer(data, index_in_class, link_name, is_ctor) {
+			var _html = null, _index_html = null;
+
+			this.get_index_html = function() {
+				if(_index_html) {
+					return _index_html;
+				}
+
+				var param_list_entries = [];
+				for(var j = 0; data.parameters && j < data.parameters.length; ++j) {
+					var p = data.parameters[j];
+					param_list_entries.push(p[0] + ' ' + p[1]);
+				}
+
+				var params = $.extend({
+					  link_info : link_name
+				}, data);	
+
+				params.parameters = param_list_entries.join(', ');
+
+				_index_html = (is_ctor
+					? ctor_index_entry_template 
+					: method_index_entry_template)(params);
+
+				return _index_html;
+			};
+
+			this.get_detail_html = function() {
+				if(_html) {
+					return _html;
+				}
+
+				var param_dox_entries = [];
+				//var param_list_entries = [];
+				if(data.parameters) {
+					for(var j = 0; j < data.parameters.length; ++j) {
+						var p = data.parameters[j];
+						//param_list_entries.push(p[0] + ' ' + p[1]);
+						param_dox_entries.push(method_param_template({
+							  type : p[0]
+							, name : p[1]
+							, doc  : p[2]
+						}));
+					}
+				}
+
+				var refs_dox_entries = [];
+				if(data.refs) {
+					for(var j = 0; j < data.refs.length; ++j) {
+						refs_dox_entries.push(method_reference_template({
+							  target : data.refs[j]
+						}));
+					}
+				}
+
+				var param_string = data.parameters ? data.parameters.length : '';
+				var refs_block = !data.refs ? '' 
+					: method_reference_block_template({
+						references : refs_dox_entries.join('')
+						});
+
+				var returns_block = $.trim(data.returns) == 0 ? ''
+					: method_returns_block_template({
+						returns : data.returns
+					});
+
+				var params = $.extend({
+					  link_info : link_name
+					, index_in_class : index_in_class
+					, param_doc : param_dox_entries.join('')
+					, param_list : param_string
+					, reference_block : refs_block
+					, returns_block : returns_block
+				}, data);
+
+				_html = method_full_template(params);
+				return _html;
+			}
+		};
+
+
+		// ----------------------------------------------------------------------------------------
+		/** Generates the HTML/DOM for the members view of a class (both index and detail view) */
+		// ----------------------------------------------------------------------------------------
+		function ClassMemberRenderer(class_renderer, members) {
 
 			var index = null;
 			var methods = null;
 
+			var renderers = [], n = 0;
+
 			var _index_includes_parent_methods = false;
 			var _minimum_protection_level = 'private';
-
-			var _scope_details_to_single_func = null;
+			var _scope_details_to_single_member = null;
 
 
 			var _update_index = function() {
@@ -835,18 +921,18 @@ return function(settings) {
 				if(!methods) { // not created yet - fine, nothing to update.
 					return;
 				}
-				var no_specific_overload = _scope_details_to_single_func && 
-					_scope_details_to_single_func[_scope_details_to_single_func.length-1] === '_';
+				var no_specific_overload = _scope_details_to_single_member && 
+					_scope_details_to_single_member[_scope_details_to_single_member.length-1] === '_';
 				methods.find('div.method').each(function() {
 					var $this = $(this);
 					var id = $this.attr('id');
 
-					if(_scope_details_to_single_func) {
+					if(_scope_details_to_single_member) {
 
 						if(no_specific_overload) {
-							id = id.slice(0,_scope_details_to_single_func.length);
+							id = id.slice(0,_scope_details_to_single_member.length);
 						}
-						if(id === _scope_details_to_single_func) {
+						if(id === _scope_details_to_single_member) {
 							$this.hide();
 							$this.fadeIn();
 						}
@@ -904,12 +990,12 @@ return function(settings) {
 			 *  function which is given by a link name. This method supports link names
 			 *  that leave the overload open (i.e. get_method_base_link_name()), in
 			 *  which case all overloads are displayed.*/
-			var scope_details_to_single_func = this.scope_details_to_single_func = function(link_name, all_overloads) {
+			var scope_details_to_single_member = this.scope_details_to_single_member = function(link_name, all_overloads) {
 				if(link_name === undefined) {
-					return _scope_details_to_single_func;
+					return _scope_details_to_single_member;
 				}
 
-				_scope_details_to_single_func = link_name;
+				_scope_details_to_single_member = link_name;
 				_update_details();
 			};
 
@@ -953,29 +1039,11 @@ return function(settings) {
 
 					// build methods index 
 					var builder = [];
-					for (var name in members) {
-						var overloads = members[name];
 
-						for(var i = 0; i < overloads.length; ++i) {
-							var data = overloads[i];
-
-							var param_list_entries = [];
-							for(var j = 0; data.parameters && j < data.parameters.length; ++j) {
-								var p = data.parameters[j];
-								param_list_entries.push(p[0] + ' ' + p[1]);
-							}
-
-							var params = $.extend({
-								  link_info : get_method_link_name(data.name, i)
-							}, data);	
-
-							params.parameters = param_list_entries.join(', ');
-
-							builder.push((name === class_renderer.get_name()
-								? ctor_index_entry_template 
-								: method_index_entry_template)(params));
-						}
+					for(var n = 0, e = renderers.length; n < e; ++n) {
+						builder.push(renderers[n].get_index_html());
 					}
+
 					index = method_index_template( {
 						index : builder.join('')
 					});
@@ -990,59 +1058,10 @@ return function(settings) {
 			var get_detail = this.get_detail = function() {
 				if(methods == null) {
 					var builder = [];
-					var n = 0;
-					for (var name in members) {
-						var overloads = members[name];
-
-						for(var i = 0; i < overloads.length; ++i) {
-							var data = overloads[i];
-							
-							var param_dox_entries = [];
-							//var param_list_entries = [];
-							if(data.parameters) {
-								for(var j = 0; j < data.parameters.length; ++j) {
-									var p = data.parameters[j];
-									//param_list_entries.push(p[0] + ' ' + p[1]);
-									param_dox_entries.push(method_param_template({
-										  type : p[0]
-										, name : p[1]
-										, doc  : p[2]
-									}));
-								}
-							}
-
-							var refs_dox_entries = [];
-							if(data.refs) {
-								for(var j = 0; j < data.refs.length; ++j) {
-									refs_dox_entries.push(method_reference_template({
-										  target : data.refs[j]
-									}));
-								}
-							}
-
-							var param_string = data.parameters ? data.parameters.length : '';
-							var refs_block = !data.refs ? '' 
-								: method_reference_block_template({
-									references : refs_dox_entries.join('')
-									});
-
-							var returns_block = $.trim(data.returns) == 0 ? ''
-								: method_returns_block_template({
-									returns : data.returns
-								});
-
-							var params = $.extend({
-								  link_info : get_method_link_name(data.name, i)
-								, index_in_class : n++
-								, param_doc : param_dox_entries.join('')
-								, param_list : param_string
-								, reference_block : refs_block
-								, returns_block : returns_block
-							}, data);
-
-							builder.push(method_full_template(params));
-						}
+					for(var n = 0, e = renderers.length; n < e; ++n) {
+						builder.push(renderers[n].get_detail_html());
 					}
+		
 					methods = builder.join('');
 
 					// wrap in a <div>
@@ -1051,6 +1070,27 @@ return function(settings) {
 				}
 
 				return methods;
+			};
+
+			// Construction:
+			// create sub-renderers implementations for every member
+			n = 0;
+			for (var name in members) {
+				var overloads = members[name];
+
+				for(var i = 0; i < overloads.length; ++i) {
+					var data = overloads[i];
+					
+					var renderer = null;
+					if(data.type === 'method') {
+						renderer = new ClassMethodRenderer(data, n++, this.get_method_link_name(data.name, i),
+							name === class_renderer.get_name());
+					}
+
+					if(renderer) {
+						renderers.push(renderer);
+					}
+				}
 			};
 		};
 
@@ -1077,12 +1117,12 @@ return function(settings) {
 				return infoset.name;
 			};
 
-			/** Get aggregate MethodRenderer for this class */
+			/** Get aggregate ClassMemberRenderer for this class */
 			var get_method_renderer = this.get_method_renderer = (function() {
 				var method_renderer = null;
 				return function() {
 					if(method_renderer === null) {
-						method_renderer = new MethodRenderer(self, infoset.members);
+						method_renderer = new ClassMemberRenderer(self, infoset.members);
 					}
 					return method_renderer;
 				}
@@ -1123,11 +1163,11 @@ return function(settings) {
 			 *  parameter receives the unqualified (unrsolved, not cleaned up) name of 
 			 *  the nested item */
 			this.preview_nested_to = function(which, left_or_right, view_planes_manager, keep_other_side) {
-				// if the requested member is a method, we simply
+				// if the requested member is a method or a field, we simply scope to it
 				var method_renderer = get_method_renderer();
 				var method = method_renderer.resolve_method_overload(which, true);
 				if(method) {
-					method_renderer.scope_details_to_single_func(method);
+					method_renderer.scope_details_to_single_member(method);
 					if(left_or_right === 0) {
 						view_planes_manager.push(method_renderer.get_detail(), keep_other_side ? null : '');
 					}
@@ -1219,7 +1259,7 @@ return function(settings) {
 
 		return {
 			  ClassRenderer : ClassRenderer
-			, MethodRenderer : MethodRenderer
+			, ClassMemberRenderer : ClassMemberRenderer
 		};
 	})();
 
