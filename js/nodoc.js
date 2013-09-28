@@ -200,8 +200,8 @@ return function(settings) {
 		'native' : 1,
 		'super' : 1,
 		'while' : 1,
-		'true' : 1
-		'false' : 1
+		'true' : 1,
+		'false' : 1,
 		'null' : 1
 	};
 
