@@ -60,7 +60,7 @@ return function(settings) {
 
 
 	var method_full_template = _.template(
-		'<div class="method" id="<%= link_info %>"> ' +
+		'<div class="method member" id="<%= link_info %>"> ' +
 			'<div class="method_info <%= access_spec %>"> </div> ' +
 			'<div class="method_info <%= extra_spec %>"> </div> ' +
 			'<h3> '+
@@ -923,7 +923,7 @@ return function(settings) {
 				}
 				var no_specific_overload = _scope_details_to_single_member && 
 					_scope_details_to_single_member[_scope_details_to_single_member.length-1] === '_';
-				methods.find('div.method').each(function() {
+				methods.find('div.member').each(function() {
 					var $this = $(this);
 					var id = $this.attr('id');
 
