@@ -855,7 +855,7 @@ return function(settings) {
 					return _html;
 				}
 
-				if(refs) {
+				if(refs && refs.length) {
 					var refs_dox_entries = [];
 					for(var j = 0; j < refs.length; ++j) {
 						refs_dox_entries.push(reference_template({
