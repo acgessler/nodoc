@@ -86,17 +86,19 @@ return function(settings) {
 		'</span> <tr/>'
 	);
 
-	var method_reference_template = _.template(
-		'<li> <span class="try_auto_link lazy_auto_link"> <%= target %> </span> </li>'
-	);
-
-	var method_reference_block_template = _.template(
-		'<b> See also: </b> <span class="method_reference"><ul> <%= references %> </ul> </span>'
-	);
-
 	var method_returns_block_template = _.template(
 		'<b> <font size="+1"> &crarr; </font> </b> <span class="method_returns"> <%= returns %> </span>'
 	);
+
+
+	var reference_template = _.template(
+		'<li> <span class="try_auto_link lazy_auto_link"> <%= target %> </span> </li>'
+	);
+
+	var reference_block_template = _.template(
+		'<b> See also: </b> <span class="reference"><ul> <%= references %> </ul> </span>'
+	);
+
 
 	var class_template = _.template(
 		'<h1> ' +
@@ -105,7 +107,9 @@ return function(settings) {
 			'</font> '+
 			'<%= name %> '+
 		'</h1> '+
-		'<%= long_desc %>');
+		'<%= long_desc %> ' + 
+		'<%= reference_block %>');
+
 
 	var method_index_entry_template = _.template(
 		'<li id="index_<%= link_info %>"> '+
@@ -812,6 +816,40 @@ return function(settings) {
 
 
 		// ----------------------------------------------------------------------------------------
+		/** Generates the HTML for a list of references in classes and members (@see).
+		 *  Generates an empty string for an empty list of refs. */
+		// ----------------------------------------------------------------------------------------
+		function ReferenceRenderer(refs) {
+
+			var _html = null;
+			this.get_html = function() {
+
+				if(_html !== null) {
+					return _html;
+				}
+
+				var refs_dox_entries = [];
+				if(refs) {
+					for(var j = 0; j < refs.length; ++j) {
+						refs_dox_entries.push(reference_template({
+							  target : refs[j]
+						}));
+					}
+
+					_html = reference_block_template({
+						references : refs_dox_entries.join('')
+						});
+				}
+				else {
+					_html = '';
+				}
+
+				return _html;
+			};
+		};
+
+
+		// ----------------------------------------------------------------------------------------
 		/** Generates the HTML for class methods (and constructors) */
 		// ----------------------------------------------------------------------------------------
 		function ClassMethodRenderer(data, index_in_class, link_name, is_ctor) {
@@ -860,20 +898,9 @@ return function(settings) {
 					}
 				}
 
-				var refs_dox_entries = [];
-				if(data.refs) {
-					for(var j = 0; j < data.refs.length; ++j) {
-						refs_dox_entries.push(method_reference_template({
-							  target : data.refs[j]
-						}));
-					}
-				}
+				var refs_block = new ReferenceRenderer(data.refs).get_html();
 
 				var param_string = data.parameters ? data.parameters.length : '';
-				var refs_block = !data.refs ? '' 
-					: method_reference_block_template({
-						references : refs_dox_entries.join('')
-						});
 
 				var returns_block = $.trim(data.returns) == 0 ? ''
 					: method_returns_block_template({
@@ -1135,7 +1162,13 @@ return function(settings) {
 					if(class_main_page === null) {
 						var method_renderer = get_method_renderer();
 						// TODO: invoke text = _replace_alternative_link_syntax(text);
-						var text = class_template(infoset);
+
+						var refs = new ReferenceRenderer(infoset.refs).get_html();
+						var text = class_template($.extend({
+								reference_block : refs
+							},
+							infoset)
+						);
 						
 						// wrapping it in a div is necessary to be able to use find() on the
 						// returned jQuery selector. Using filter() and stuff should 
