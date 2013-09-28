@@ -32,7 +32,7 @@ rex = {
 		# start of multiline comment
 		\/\*\*		
 		# actual comment
-		(.*?)		
+		((?:(?<!\*\/).)*?)		
 		# end of multiline comment
 		\*\/\s*		
 		# java modifiers
@@ -54,19 +54,18 @@ rex = {
 		# start of multiline comment
 		\/\*\*		
 		# actual comment
-		(.*?)		
+		((?:(?<!\*\/).)*?)		
 		# end of multiline comment
-		\*\/\s*?		
-
+		\*\/\s*
 		# java modifiers
-		((?:(?:final|synchronized|static|transient|public|private|protected)\s+?)*)	
+		((?:(?:final|synchronized|static|transient|public|private|protected)\s+)*)	
 		# type, cannot be further tackled with a regex		
-		(\S*?)\s+?						
+		(\S*?)\s+		
 		# name of the field
-		(\w+?)\s+?		
+		(\w+?)\s+		
 		# followed by either value assignment or a semicolon (to rule out
 		# ambiguity with methods)
-		=|;										
+		(?:\=|\;)										
 	"""
 }
 
@@ -218,6 +217,7 @@ class JavaField(object):
 		`regex_match` - match against rex['java-field-head']
 		"""
 		comment, modifiers, type, name = regex_match.groups()
+		#print(regex_match.groups())
 		print(name)
 		print(comment)
 
@@ -364,9 +364,9 @@ class JavaClass(object):
 			method = JavaMethod(match)
 			self.members.setdefault(method.name,[]).append(method)
 
-		#for match in re.finditer(rex['java-field-head'], unparsed_block):
-		#	field = JavaField(match)
-		#	self.members.setdefault(field.name,[]).append(field)
+		for match in re.finditer(rex['java-field-head'], unparsed_block):
+			field = JavaField(match)
+			self.members.setdefault(field.name,[]).append(field)
 
 
 	def get_infoset(self):
