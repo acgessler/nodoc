@@ -86,8 +86,8 @@ class JavaHTMLFormatter(object):
 		Given a javadoc annotated text block, strip any trailing asterisks from each line.
 		"""
 		# TODO: also handle line comments
-		lines = [line.strip() for line in block.split('\n') if len(line.strip()) > 0]
-		lines = [line[1:] if line[0] == '*' else line for line in lines]
+		lines = [(line, line.strip()) for line in block.split('\n') if len(line.strip()) > 0]
+		lines = [line_stripped[1:] if line_stripped[0] == '*' else line for line, line_stripped in lines]
 		return '\n'.join(lines)
 
 
