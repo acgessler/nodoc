@@ -666,6 +666,15 @@ return function(settings) {
 				var view_plane_manager = class_renderer.get_active_view_planes_manager();
 				var target = $.trim($elem.text());
 
+				// if a link cannot be resolved, we show a failure tooltip on it
+				var fail = (function(target) { 
+					return function() {
+						$elem.qtip({
+					    	content: 'Failed to resolve link: ' + target
+						})
+					};
+				})(target);
+
 				if(!target) {
 					return;
 				}
@@ -736,6 +745,7 @@ return function(settings) {
 				// ## check if this link can be resolved to a method in the current class
 				var method_link = class_renderer.get_method_renderer().resolve_method_overload(target);
 				if(method_link) { //
+					console.log('method link: ' + method_link);
 					on_leave = function() {
 						// give it a small delay until we undo the preview
 						_preview_method(class_renderer, method_link, true);
@@ -772,16 +782,20 @@ return function(settings) {
 					}
 				}
 
-
 				// TODO - temporary HACK to get package siblings, assumes index is loaded
 				// and callback is called immediately.
 				page_controller.lookup(target, function(external_model, external_renderer) {
-						if(!model) {
+						if(!external_model) {
+							console.log('fail: ' + target);
+							fail();
 							return;
 						}
+
 	
 						var undo = null;
 						on_enter = function() {
+							console.log('attempt: ' + target);
+
 							// special handling for methods, again
 							if(method_name) {
 								undo = external_renderer.preview_nested_to(method_name,
@@ -1013,6 +1027,7 @@ return function(settings) {
 			 *  A `null` is returned if the method name could not be found in the class,
 			 *  or the input is malformed.*/
 			var resolve_method_overload = this.resolve_method_overload = function(name, ignore_overload_match_failure) {
+				console.log(members);
 				if(!(name in members)) {
 					return null;
 				};
