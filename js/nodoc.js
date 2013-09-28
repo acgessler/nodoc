@@ -96,7 +96,7 @@ return function(settings) {
 	);
 
 	var reference_block_template = _.template(
-		'<b> See also: </b> <span class="reference"><ul> <%= references %> </ul> </span>'
+		'<br/> <b> See also: </b> <span class="reference"><ul> <%= references %> </ul> </span>'
 	);
 
 
