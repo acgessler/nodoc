@@ -670,7 +670,8 @@ return function(settings) {
 				var fail = (function(target) { 
 					return function() {
 						$elem.qtip({
-					    	content: 'Failed to resolve link: ' + target
+					    	content: 'Failed to resolve link: ' + target,
+					    	style: { classes: 'qtip-red qtip-shadow' }
 						})
 					};
 				})(target);
@@ -745,7 +746,6 @@ return function(settings) {
 				// ## check if this link can be resolved to a method in the current class
 				var method_link = class_renderer.get_method_renderer().resolve_method_overload(target);
 				if(method_link) { //
-					console.log('method link: ' + method_link);
 					on_leave = function() {
 						// give it a small delay until we undo the preview
 						_preview_method(class_renderer, method_link, true);
@@ -786,16 +786,12 @@ return function(settings) {
 				// and callback is called immediately.
 				page_controller.lookup(target, function(external_model, external_renderer) {
 						if(!external_model) {
-							console.log('fail: ' + target);
 							fail();
 							return;
 						}
-
 	
 						var undo = null;
 						on_enter = function() {
-							console.log('attempt: ' + target);
-
 							// special handling for methods, again
 							if(method_name) {
 								undo = external_renderer.preview_nested_to(method_name,
@@ -1027,7 +1023,6 @@ return function(settings) {
 			 *  A `null` is returned if the method name could not be found in the class,
 			 *  or the input is malformed.*/
 			var resolve_method_overload = this.resolve_method_overload = function(name, ignore_overload_match_failure) {
-				console.log(members);
 				if(!(name in members)) {
 					return null;
 				};
