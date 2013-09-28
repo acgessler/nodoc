@@ -35,11 +35,8 @@ rex = {
 		(.*?)		
 		# end of multiline comment
 		\*\/\s*		
-
-		# java access specifier
-		(public|private|protected|)\s*	
 		# java modifiers
-		((?:(?:abstract|final|synchronized|static|native)\s+)*)	
+		((?:(?:abstract|final|synchronized|static|native|public|private|protected)\s+)*)	
 		# return type, cannot be further tackled with a regex		
 		(\S*?)\s+						
 		# name of the function
@@ -59,16 +56,17 @@ rex = {
 		# actual comment
 		(.*?)		
 		# end of multiline comment
-		\*\/\s*		
+		\*\/\s*?		
 
-		# java access specifier
-		(public|private|protected|)\s*	
 		# java modifiers
-		((?:(?:final|synchronized|static)\s+)*)	
+		((?:(?:final|synchronized|static|transient|public|private|protected)\s+?)*)	
 		# type, cannot be further tackled with a regex		
-		(\S*?)\s+						
+		(\S*?)\s+?						
 		# name of the field
-		(\w+?)\s+												
+		(\w+?)\s+?		
+		# followed by either value assignment or a semicolon (to rule out
+		# ambiguity with methods)
+		=|;										
 	"""
 }
 
@@ -219,11 +217,13 @@ class JavaField(object):
 		"""
 		`regex_match` - match against rex['java-field-head']
 		"""
-		comment, access_spec, extra_spec, type, name = regex_match.groups()
+		comment, modifiers, type, name = regex_match.groups()
+		print(name)
+		print(comment)
 
 		self.name = name
-		self.access_spec = access_spec
-		self.extra_spec = extra_spec
+		self.access_spec = modifiers
+		self.extra_spec = modifiers
 		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.type = type.strip()
 		self.refs = JavaHTMLFormatter.javadoc_extract_references(self.comment)
@@ -246,11 +246,16 @@ class JavaMethod(object):
 		"""
 		`regex_match` - match against rex['java-method-head']
 		"""
-		comment, access_spec, extra_spec, return_type, name, params = regex_match.groups()
+		comment, modifiers, return_type, name, params = regex_match.groups()
+
+		modifiers = set(modifiers.split())
+		access = set(['public', 'private', 'protected'])
+		access = (modifiers & access)
+		modifiers = modifiers - access
 
 		self.name = name
-		self.access_spec = access_spec
-		self.extra_spec = extra_spec
+		self.access_spec = list(access or [''])[0]
+		self.extra_spec = ' '.join(list(modifiers))
 		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.return_type = return_type.strip()
 		self.parameters = JavaMethod.parse_parameters(params, self.comment)
@@ -359,9 +364,9 @@ class JavaClass(object):
 			method = JavaMethod(match)
 			self.members.setdefault(method.name,[]).append(method)
 
-		for match in re.finditer(rex['java-field-head'], unparsed_block):
-			field = JavaField(match)
-			self.members.setdefault(field.name,[]).append(field)
+		#for match in re.finditer(rex['java-field-head'], unparsed_block):
+		#	field = JavaField(match)
+		#	self.members.setdefault(field.name,[]).append(field)
 
 
 	def get_infoset(self):
