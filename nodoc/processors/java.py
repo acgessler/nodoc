@@ -28,6 +28,8 @@ rex = {
 	"""
 
 	# matches a javadoc comment on top of a method, along with the method declaration
+	# note: also matches constructors, but puts their access specifier erroneously as
+	# return type.
 	, 'java-method-head' : r""" 
 		# start of multiline comment
 		\/\*\*		
@@ -242,13 +244,18 @@ class JavaMethod(object):
 	Temporary representation for a partially parsed Java method.
 	"""
 
-	def __init__(self, regex_match):
+	def __init__(self, regex_match, class_name):
 		"""
 		`regex_match` - match against rex['java-method-head']
 		"""
 		comment, modifiers, return_type, name, params = regex_match.groups()
 
 		modifiers = set(modifiers.split())
+		is_ctor = class_name == name
+		if is_ctor:
+			# regexp parsed one modifier as return type
+			modifiers.add(return_type)
+
 		access = set(['public', 'private', 'protected'])
 		access = (modifiers & access)
 		modifiers = modifiers - access
@@ -257,7 +264,7 @@ class JavaMethod(object):
 		self.access_spec = list(access or [''])[0]
 		self.extra_spec = ' '.join(list(modifiers))
 		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
-		self.return_type = return_type.strip()
+		self.return_type ='' if is_ctor else return_type.strip()
 		self.parameters = JavaMethod.parse_parameters(params, self.comment)
 		self.refs = JavaHTMLFormatter.javadoc_extract_references(self.comment)
 		self.throws = JavaHTMLFormatter.javadoc_method_extract_exceptions(self.comment)
@@ -361,7 +368,7 @@ class JavaClass(object):
 
 		# TODO: drop inner classes
 		for match in re.finditer(rex['java-method-head'], unparsed_block):
-			method = JavaMethod(match)
+			method = JavaMethod(match, name)
 			self.members.setdefault(method.name,[]).append(method)
 
 		for match in re.finditer(rex['java-field-head'], unparsed_block):
