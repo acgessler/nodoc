@@ -145,7 +145,7 @@ class JavaHTMLFormatter(object):
 
 
 	@staticmethod
-	def javadoc_method_extract_references(block):
+	def javadoc_extract_references(block):
 		"""
 		Extracts external or internal references (@see) from a JavaDoc method doc.
 
@@ -155,7 +155,7 @@ class JavaHTMLFormatter(object):
 
 
 	@staticmethod
-	def javadoc_method_extract_since(block):
+	def javadoc_extract_since(block):
 		"""
 		Extracts the value of the @since attribute, if any.
 
@@ -200,6 +200,10 @@ class JavaHTMLFormatter(object):
 	def javadoc_field_doc_to_html(*args, **kwargs):
 		return JavaHTMLFormatter.javadoc_method_doc_to_html(*args, **kwargs)
 
+	@staticmethod
+	def javadoc_class_doc_to_html(*args, **kwargs):
+		return JavaHTMLFormatter.javadoc_method_doc_to_html(*args, **kwargs)
+
 
 class ParseError(Exception):
 	def __init__(self, str):
@@ -222,8 +226,8 @@ class JavaField(object):
 		self.extra_spec = extra_spec
 		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.type = type.strip()
-		self.refs = JavaHTMLFormatter.javadoc_method_extract_references(self.comment)
-		self.since = JavaHTMLFormatter.javadoc_method_extract_since(self.comment)
+		self.refs = JavaHTMLFormatter.javadoc_extract_references(self.comment)
+		self.since = JavaHTMLFormatter.javadoc_extract_since(self.comment)
 
 	def get_infoset(self):
 		import copy
@@ -250,9 +254,9 @@ class JavaMethod(object):
 		self.comment = JavaHTMLFormatter.javadoc_strip_asterisks(comment)
 		self.return_type = return_type.strip()
 		self.parameters = JavaMethod.parse_parameters(params, self.comment)
-		self.refs = JavaHTMLFormatter.javadoc_method_extract_references(self.comment)
+		self.refs = JavaHTMLFormatter.javadoc_extract_references(self.comment)
 		self.throws = JavaHTMLFormatter.javadoc_method_extract_exceptions(self.comment)
-		self.since = JavaHTMLFormatter.javadoc_method_extract_since(self.comment)
+		self.since = JavaHTMLFormatter.javadoc_extract_since(self.comment)
 		self.returns = JavaHTMLFormatter.javadoc_method_extract_return(self.comment)
 
 	@staticmethod
@@ -368,7 +372,11 @@ class JavaClass(object):
 		class_info['name'] = self.name
 		class_info['since'] = 'TODO' 
 		class_info['short_desc'] = "TODO"
-		class_info['long_desc'] = JavaHTMLFormatter.javadoc_block_to_html(self.comment)
+		class_info['long_desc'] = JavaHTMLFormatter.javadoc_class_doc_to_html(self.comment)
+
+		class_info['refs'] = JavaHTMLFormatter.javadoc_extract_references(self.comment)
+		class_info['since'] = JavaHTMLFormatter.javadoc_extract_since(self.comment)
+
 		members = class_info['members'] = {}
 
 		for name, overloads in self.members.items():
