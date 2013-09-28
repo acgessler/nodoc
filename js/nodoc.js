@@ -703,6 +703,10 @@ return function(settings) {
 
 				// ## check if this a link to the current class - ignore it then.
 				if(target === infoset.name) {
+					$elem.qtip({
+				    	content: 'Current class',
+				    	style: { classes: 'qtip-shadow' }
+					})
 					return;
 				}
 
