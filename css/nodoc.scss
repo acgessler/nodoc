@@ -161,7 +161,7 @@ li.search_entry_java_class {
 
 }
 
-.method_info {
+.method_info, .class_info {
 	padding: 0px;
 	margin: 0px;
 	margin-right: 10px;
@@ -200,8 +200,14 @@ li.search_entry_java_class {
 	}
 }
 
-.method_name {
+.method_name, .class_name {
 	font-family: #{$monospace_fonts};
+}
+
+.class_type {
+	font-size: 14px;
+	font-family: #{$monospace_fonts};
+	color: #666688;
 }
 
 .method_param_list, .method_return_type, .method_spec {

@@ -121,7 +121,7 @@ li.search_entry_java_class span.class_package {
   float: left;
 }
 
-.method_info {
+.method_info, .class_info {
   padding: 0px;
   margin: 0px;
   margin-right: 10px;
@@ -129,7 +129,7 @@ li.search_entry_java_class span.class_package {
   height: 0px;
   background-repeat: no-repeat;
 }
-.method_info.public, .method_info.protected, .method_info.final {
+.method_info.public, .method_info.protected, .method_info.final, .class_info.public, .class_info.protected, .class_info.final {
   float: left;
   visibility: visible;
   position: relative;
@@ -139,20 +139,26 @@ li.search_entry_java_class span.class_package {
   background-repeat: no-repeat;
   background-position: center;
 }
-.method_info.public {
+.method_info.public, .class_info.public {
   background-image: url(../img/public.png);
 }
-.method_info.protected {
+.method_info.protected, .class_info.protected {
   background-image: url(../img/protected.png);
 }
-.method_info.final {
+.method_info.final, .class_info.final {
   width: 35px;
   height: 35px;
   background-image: url(../img/final.png);
 }
 
-.method_name {
+.method_name, .class_name {
   font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+}
+
+.class_type {
+  font-size: 14px;
+  font-family: Consolas,Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New,  monospace;
+  color: #666688;
 }
 
 .method_param_list, .method_return_type, .method_spec {

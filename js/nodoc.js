@@ -101,11 +101,11 @@ return function(settings) {
 
 
 	var class_template = _.template(
+		'<div class="class_info <%= access_prefix %>"> </div> ' +
+		'<div class="class_info <%= extra_prefix %>"> </div> ' +
 		'<h1> ' +
-			'<font size="-1">' + 
-				'<%= access_prefix %> <%= extra_prefix %> <%= type %> '+
-			'</font> '+
-			'<%= name %> '+
+			'<span class="class_type"> <%= type %> </span>' +
+			'<span class="class_name"> <%= name %> </span>' +
 		'</h1> '+
 		'<%= long_desc %> ' + 
 		'<%= reference_block %>');
