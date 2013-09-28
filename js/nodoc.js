@@ -703,7 +703,7 @@ return function(settings) {
 							return false;
 						}
 						// the leave operation may not be canceled
-						_call_delayed(on_leave(), 0, true);
+						_call_delayed(on_leave, 0, true);
 						return false;
 					});
 
