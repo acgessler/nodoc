@@ -835,8 +835,8 @@ return function(settings) {
 					return _html;
 				}
 
-				var refs_dox_entries = [];
 				if(refs) {
+					var refs_dox_entries = [];
 					for(var j = 0; j < refs.length; ++j) {
 						refs_dox_entries.push(reference_template({
 							  target : refs[j]
@@ -1142,6 +1142,9 @@ return function(settings) {
 			// handle the 'a#b' syntax for referencing (external) members 
 			// by reducing it to 'a.b' canonical form.
 			var _replace_alternative_link_syntax = function(text) {
+				if(text && text[0] === '#') {
+					return text.slice(1);
+				}
 				return text.replace(/\b(\w*)#(\w+)\b/g, '$1.$2');
 			};
 
@@ -1270,7 +1273,7 @@ return function(settings) {
 
 					page.find('.try_auto_link').each(function() {
 						var $this = $(this);
-						var target = $this.text();
+						var target = $.trim($this.text());
 
 						var newt = _replace_alternative_link_syntax(target);
 						$this.text(newt);
