@@ -604,7 +604,7 @@ return function(settings) {
 					}
 				}
 				else {
-					doit(); 
+					callback();
 				}
 			};
 
@@ -730,7 +730,7 @@ return function(settings) {
 							return false;
 						}
 						// the leave operation may not be canceled
-						_call_delayed(on_leave, 0, true);
+						on_leave();
 						return false;
 					});
 
@@ -747,6 +747,7 @@ return function(settings) {
 						$elem.click(function(e) {
 							closed = true;
 							e.preventDefault();
+							on_leave();
 							on_click();
 							return false;
 						});
@@ -757,12 +758,10 @@ return function(settings) {
 				var method_link = class_renderer.get_method_renderer().resolve_method_overload(target);
 				if(method_link) { //
 					on_leave = function() {
-						// give it a small delay until we undo the preview
 						_preview_method(class_renderer, method_link, true);
 					};
 
 					on_enter = function() {
-						// give it a small delay until we show the preview
 						_preview_method(class_renderer, method_link, false);
 					};
 
@@ -1120,6 +1119,7 @@ return function(settings) {
 
 					// wrap in a <div>
 					methods = $('<div>' + methods + '</div>');
+					methods.find('pre').addClass("prettyprint lang-java");
 					_update_details();
 				}
 
